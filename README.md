@@ -20,6 +20,9 @@ Translators
 Requirements  
 ==========
 * Plasma >= 5.8.0
+* cmake
+* extra-cmake-modules
+* gettext
 
 **development packages for:**
 ```bash
@@ -32,6 +35,15 @@ Requirements
  KF5WindowSystem >= 5.25.0
  KF5KDELibs4Support >= 5.25.0
  KF5CoreAddons >= 5.25.0
+```
+**those development packages can be instaled with the folowing packages:**
+```bash
+ plasma-framework-dev
+ qtdeclarative5-dev
+ libqt5x11extras5-dev
+ plasma-desktop-dev
+ libkf5declarative-dev
+ libkf5kdelibs4support-dev
 ```
 
 Contributors
