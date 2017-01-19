@@ -95,7 +95,6 @@ public slots:
     Q_INVOKABLE void removeAppletItem(QObject *item);
 
     Q_INVOKABLE void addNewDock();
-    Q_INVOKABLE void removeDock();
 
     Q_INVOKABLE QList<int> freeEdges() const;
     Q_INVOKABLE QVariantList containmentActions();
@@ -124,6 +123,7 @@ signals:
     void maxThicknessChanged();
     void visibilityChanged();
     void maskAreaChanged();
+    void removeDock();
     void shadowChanged();
 
     void localDockGeometryChanged();

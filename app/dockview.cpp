@@ -71,7 +71,7 @@ DockView::DockView(Plasma::Corona *corona, QScreen *targetScreen)
         QAction *lockWidgetsAction = containment()->actions()->action("lock widgets");
         containment()->actions()->removeAction(lockWidgetsAction);
         QAction *removeAction = containment()->actions()->action("remove");
-        removeAction->setVisible(false);
+        //removeAction->setVisible(false);
         //containment()->actions()->removeAction(removeAction);
         //FIX: hide and not delete in order to disable a nasty behavior from
         //ContainmentInterface. If only one action exists for containment the
@@ -145,17 +145,6 @@ void DockView::addNewDock()
 
     if (dockCorona) {
         dockCorona->loadDefaultLayout();
-    }
-}
-
-void DockView::removeDock()
-{
-    if (docksCount() > 1) {
-        QAction *removeAct = containment()->actions()->action(QStringLiteral("remove"));
-
-        if (removeAct) {
-            removeAct->trigger();
-        }
     }
 }
 

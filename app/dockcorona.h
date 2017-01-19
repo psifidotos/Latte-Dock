@@ -69,6 +69,7 @@ signals:
 private slots:
     void destroyedChanged(bool destroyed);
     void load();
+    void removeDock();
 
 private:
     void qmlRegisterTypes() const;

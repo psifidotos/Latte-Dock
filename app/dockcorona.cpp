@@ -214,6 +214,8 @@ void DockCorona::addDock(Plasma::Containment *containment)
     dockView->setContainment(containment);
     connect(containment, &QObject::destroyed, this, &DockCorona::dockContainmentDestroyed);
     connect(containment, &Plasma::Applet::destroyedChanged, this, &DockCorona::destroyedChanged);
+    connect(dockView, &DockView::removeDock, this, &DockCorona::removeDock);
+
     dockView->show();
     m_dockViews[containment] = dockView;
     emit docksCountChanged();
@@ -240,10 +242,23 @@ void DockCorona::dockContainmentDestroyed(QObject *cont)
 {
     auto view = m_waitingDockViews.take(static_cast<Plasma::Containment *>(cont));
 
-    if (view)
+    if (view) {
         delete view;
+        emit docksCountChanged();
+    }
+}
 
-    emit docksCountChanged();
+void DockCorona::removeDock()
+{
+    DockView *view = qobject_cast<DockView *>(QObject::sender());
+
+    if (view) {
+        QAction *removeAct = view->containment()->actions()->action(QStringLiteral("remove"));
+
+        if (removeAct) {
+            removeAct->trigger();
+        }
+    }
 }
 
 void DockCorona::loadDefaultLayout()
