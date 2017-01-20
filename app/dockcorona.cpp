@@ -251,14 +251,11 @@ void DockCorona::dockContainmentDestroyed(QObject *cont)
 
 void DockCorona::removeDock()
 {
-    DockView *view = qobject_cast<DockView *>(QObject::sender());
-
-    if (view) {
-        QAction *removeAct = view->containment()->actions()->action(QStringLiteral("remove"));
-
-        if (removeAct) {
-            removeAct->trigger();
-        }
+    DockView *view = qobject_cast<DockView *> (QObject::sender());
+    if (view)
+    {
+        m_dockViews.take(view->containment());
+        view->deleteLater();
     }
 }
 

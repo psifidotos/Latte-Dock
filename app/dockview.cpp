@@ -94,14 +94,6 @@ DockView::~DockView()
 
     this->disconnect();
     qDebug() << "dock view connections deleted...";
-
-    if (m_configView) {
-        delete m_configView;
-    }
-
-    if (m_visibility) {
-        delete m_visibility;
-    }
 }
 
 void DockView::init()
