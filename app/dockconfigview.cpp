@@ -68,6 +68,8 @@ DockConfigView::~DockConfigView()
     foreach (auto var, connections) {
         QObject::disconnect(var);
     }
+
+    qDebug() << "config window deleted...";
 }
 
 void DockConfigView::init()

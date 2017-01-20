@@ -96,8 +96,7 @@ DockView::~DockView()
     qDebug() << "dock view connections deleted...";
 
     if (m_configView) {
-        m_configView->hide();
-        m_configView->deleteLater();
+        delete m_configView;
     }
 
     if (m_visibility) {
