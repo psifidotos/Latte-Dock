@@ -170,7 +170,7 @@ msgstr "Unten"
 
 #: ../../plasmoid/contents/ui/ConfigPanel.qml:76
 msgid "Show bar line for tasks"
-msgstr "Zeige Linie für aktive Anwendungen"
+msgstr "Zeige Hintergrund der Leiste"
 
 #: ../../plasmoid/contents/ui/ConfigPanel.qml:83
 msgid "Use plasma theme panel"
