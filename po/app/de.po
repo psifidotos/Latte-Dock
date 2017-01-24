@@ -24,7 +24,7 @@ msgstr "Größe"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:110
 msgid "Zoom On Hover"
-msgstr "Vergrößerung bei Überfahren"
+msgstr "Vergrößern beim Überfahren"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:123
 msgid "Zoom Factor"
