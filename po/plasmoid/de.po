@@ -281,7 +281,7 @@ msgstr "Vollbild"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:497
 msgid "Shade"
-msgstr "Abdunkeln"
+msgstr "Fensterheber"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:512
 msgid "Allow this program to be grouped"
