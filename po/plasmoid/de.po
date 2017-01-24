@@ -109,7 +109,7 @@ msgstr "Zeige Fortschrittsanzeige für Aufgaben"
 
 #: ../../plasmoid/contents/ui/ConfigInteraction.qml:89
 msgid "On middle-click:"
-msgstr "Mittlere Maus Taste:"
+msgstr "Mittlere Maustaste:"
 
 #: ../../plasmoid/contents/ui/ConfigInteraction.qml:95
 msgctxt "The click action"
