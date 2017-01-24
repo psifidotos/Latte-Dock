@@ -60,7 +60,7 @@ msgstr "Umgekehrte Postition für Linien und Punkte"
 
 #: ../../plasmoid/contents/ui/ConfigAppearance.qml.cmake:207
 msgid "Animations: "
-msgstr "Animationen:"
+msgstr "Animation:"
 
 #: ../../plasmoid/contents/ui/ConfigAppearance.qml.cmake:225
 msgid "duration"
