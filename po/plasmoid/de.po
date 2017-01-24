@@ -285,7 +285,7 @@ msgstr "Abdunkeln"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:512
 msgid "Allow this program to be grouped"
-msgstr "Programm darf gruppieren"
+msgstr "Erlaube Gruppierung"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:525
 msgid "Start New Instance"
