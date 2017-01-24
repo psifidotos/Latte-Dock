@@ -1,25 +1,24 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <neumdotjaatgmaildotcom>, 2017.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/psifidotos/latte-dock/\n"
 "POT-Creation-Date: 2017-01-24 09:37+0100\n"
-"PO-Revision-Date: 2017-01-24 12:19+0100\n"
-"Language-Team: German <kde-i18n-doc@kde.org>\n"
+"PO-Revision-Date: 2017-01-24 15:58+0100\n"
+"Language-Team: Jan Neumann <neumdotjaatgmaildotcom>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 1.8.11\n"
-"Last-Translator: Jan Neumann\n"
+"Last-Translator: \n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Language: de_DE\n"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:59
-#, fuzzy
 msgid "Applets Size"
 msgstr "Größe"
 
@@ -79,22 +78,22 @@ msgstr "Position"
 #: ../../shell/contents/configuration/BehaviorConfig.qml:96
 msgctxt "bottom location"
 msgid "Bottom"
-msgstr "unten"
+msgstr "Unten"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:107
 msgctxt "left location"
 msgid "Left"
-msgstr "links"
+msgstr "Links"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:118
 msgctxt "top location"
 msgid "Top"
-msgstr "oben"
+msgstr "Oben"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:129
 msgctxt "right location"
 msgid "Right"
-msgstr "rechts"
+msgstr "Rechts"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:148
 msgid "Alignment"
@@ -103,27 +102,27 @@ msgstr "Ausrichtung"
 #: ../../shell/contents/configuration/BehaviorConfig.qml:183
 msgctxt "top alignment"
 msgid "Top"
-msgstr "oben"
+msgstr "Oben"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:183
 msgctxt "left alignment"
 msgid "Left"
-msgstr "links"
+msgstr "Links"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:193
 msgctxt "center alignment"
 msgid "Center"
-msgstr "mitte"
+msgstr "Mitte"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:203
 msgctxt "bottom alignment"
 msgid "Bottom"
-msgstr "unten"
+msgstr "Unten"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:203
 msgctxt "right alignment"
 msgid "Right"
-msgstr "rechts"
+msgstr "Rechts"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:214
 msgctxt "justify alignment"
@@ -209,7 +208,7 @@ msgstr "ms."
 
 #: ../../shell/contents/configuration/TasksConfig.qml:54
 msgid "Show glow around windows points"
-msgstr "Glühende Fenster"
+msgstr "Glühende Punkte für Fenster"
 
 #: ../../shell/contents/configuration/TasksConfig.qml:65
 msgid "Different color for minimized windows"
