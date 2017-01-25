@@ -249,15 +249,15 @@ msgstr "Alle Aktivitäten"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:406
 msgid "Minimize"
-msgstr "Minimiere"
+msgstr "Minimieren"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:422
 msgid "Maximize"
-msgstr "Maximiere"
+msgstr "Maximieren"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:437
 msgid "More Actions"
-msgstr "Mehr Aktionen"
+msgstr "Weitere Aktionen"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:445
 msgid "Move"
@@ -269,11 +269,11 @@ msgstr "Größe ändern"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:463
 msgid "Keep Above Others"
-msgstr "Im Vordergrund halten"
+msgstr "Immer im Vordergrund"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:473
 msgid "Keep Below Others"
-msgstr "Im Hintergrund halten"
+msgstr "Immer im Hintergrund"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:485
 msgid "Fullscreen"
