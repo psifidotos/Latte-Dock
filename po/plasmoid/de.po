@@ -221,7 +221,7 @@ msgstr "Wiederherstellen"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:226
 msgid "Move To Desktop"
-msgstr "Verschiebe auf Arbeitsfläche"
+msgstr "Auf Arbeitsfläche verschieben"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:248
 msgid "Move To Current Desktop"
