@@ -265,7 +265,7 @@ msgstr "%1 Optionen"
 
 #: ../../app/packageplugins/shell/dockpackage.cpp:44
 msgid "Latte Dock panel"
-msgstr "Latte Dock Leiste"
+msgstr "Latte Dock panel"
 
 #: ../../app/packageplugins/shell/dockpackage.cpp:46
 msgid "Dock configuration UI"
@@ -285,4 +285,4 @@ msgstr "Dock für die Massen"
 
 #: rc.cpp:3
 msgid "Dock"
-msgstr "Leiste"
+msgstr "Dock"
