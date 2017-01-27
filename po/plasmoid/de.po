@@ -302,7 +302,7 @@ msgstr "Im Dock behalten"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:591
 msgid "Remove Launcher"
-msgstr "Entferne Starter"
+msgstr "Starter entfernen"
 
 #: ../../plasmoid/contents/ui/ContextMenu.qml:621
 msgid "Close"
