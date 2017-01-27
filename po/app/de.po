@@ -37,7 +37,7 @@ msgstr "Animation"
 #: ../../shell/contents/configuration/AppearanceConfig.qml:183
 #: ../../shell/contents/configuration/AppearanceConfig.qml:310
 msgid "None"
-msgstr "Keine"
+msgstr "Aus"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:192
 msgid "x1"
