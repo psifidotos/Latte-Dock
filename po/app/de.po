@@ -127,7 +127,7 @@ msgstr "Rechts"
 #: ../../shell/contents/configuration/BehaviorConfig.qml:214
 msgctxt "justify alignment"
 msgid "Justify"
-msgstr "Ausrichten"
+msgstr "Platzhalter"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:232
 msgid "Visibility"
