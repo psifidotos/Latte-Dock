@@ -127,7 +127,7 @@ msgstr "Rechts"
 #: ../../shell/contents/configuration/BehaviorConfig.qml:214
 msgctxt "justify alignment"
 msgid "Justify"
-msgstr "Platzhalter"
+msgstr "Abstandhalter"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:232
 msgid "Visibility"
@@ -139,7 +139,7 @@ msgstr "Immer sichtbar"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:266
 msgid "Auto Hide"
-msgstr "Auto verbergen"
+msgstr "Automatisch ausblenden"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:275
 msgid "Dodge Active"
