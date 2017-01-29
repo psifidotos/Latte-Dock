@@ -250,7 +250,7 @@ PlasmaComponents.Page {
 
                     value: plasmoid.configuration.panelSize
                     minimumValue: 0
-                    maximumValue: plasmoid.configuration.iconSize + units.smallSpacing
+                    maximumValue: Number(1.12 * plasmoid.configuration.iconSize).toFixed(0) //0.12*iconSize is the iconMargin
                     stepSize: 2
 
                     function updatePanelSize() {
@@ -330,51 +330,57 @@ PlasmaComponents.Page {
 
 
         //! BEGIN: Shadows
-        Column {
+        ColumnLayout {
             Layout.fillWidth: true
             spacing: units.smallSpacing
 
             Header {
-                text: i18n("Shadows")
+                text: i18n("Applet shadows")
             }
 
             RowLayout{
                 Layout.fillWidth: true
+                Layout.leftMargin: units.smallSpacing / 2
 
-                Item{
-                    width: units.smallSpacing / 2
-                }
-
-                PlasmaComponents.ButtonColumn {
+                RowLayout {
                     Layout.fillWidth: true
 
                     spacing: units.smallSpacing
-                    exclusive: true
 
                     property int shadows: plasmoid.configuration.shadows
 
-                    onCheckedButtonChanged: {
-                        if (checkedButton.checked)
-                            plasmoid.configuration.shadows = checkedButton.shadow
+                    ExclusiveGroup {
+                        id: shadowsGroup
+                        onCurrentChanged: {
+                            if (current.checked)
+                                plasmoid.configuration.shadows = current.shadow
+                        }
                     }
 
                     PlasmaComponents.RadioButton {
+                        Layout.fillWidth: true
+
                         text: i18n("None")
                         checked: parent.shadows === shadow
+                        exclusiveGroup: shadowsGroup
 
                         readonly property int shadow: 0
                     }
                     PlasmaComponents.RadioButton {
                         Layout.fillWidth: true
 
-                        text: i18n("Only for locked applets")
+                        text: i18n("Locked")
                         checked: parent.shadows === shadow
+                        exclusiveGroup: shadowsGroup
 
                         readonly property int shadow: 1
                     }
                     PlasmaComponents.RadioButton {
-                        text: i18n("All applets")
+                        Layout.fillWidth: true
+
+                        text: i18n("All")
                         checked: parent.shadows === shadow
+                        exclusiveGroup: shadowsGroup
 
                         readonly property int shadow: 2
                     }

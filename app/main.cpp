@@ -83,7 +83,10 @@ inline void configureAboutData()
     KAboutData about(QStringLiteral("lattedock")
                      , QStringLiteral("Latte Dock")
                      , QStringLiteral(LATTE_VERSION)
-                     , i18n("Latte is a dock based on plasma frameworks that provides an elegant and intuitive experience for your tasks and plasmoids. It animates its contents by using parabolic zoom effect and trys to be there only when it is needed.\n\n\"Art in Coffee\"")
+                     , i18n("Latte is a dock based on plasma frameworks that provides an elegant and "
+                            "intuitive experience for your tasks and plasmoids. It animates its contents "
+                            "by using parabolic zoom effect and trys to be there only when it is needed."
+                            "\n\n\"Art in Coffee\"")
                      , KAboutLicense::GPL_V2
                      , QStringLiteral("\251 2016-2017 Michail Vourlakos, Smith AR"));
 
@@ -96,11 +99,11 @@ inline void configureAboutData()
     about.addAuthor(QStringLiteral("Smith AR"), QString(), QStringLiteral("audoban@openmailbox.org"));
 
     // Credits
-    about.addCredit(QStringLiteral("varlesh"), i18n("Logo and Icons")
+    about.addCredit(QStringLiteral("Alexey Varfolomeev (varlesh)"), i18n("Logo and Icons")
                     , QString(), QStringLiteral("https://github.com/varlesh"));
-    about.addCredit(QStringLiteral("JenaPlinsky"), i18n("Many bug reports")
+    about.addCredit(QStringLiteral("Ivan Bordoni"), i18n("Many bug reports")
                     , QString(), QStringLiteral("https://github.com/JenaPlinsky"));
-    about.addCredit(QStringLiteral("elav"), i18n("Reviews for Latte Dock, CandilDock and NowDock")
+    about.addCredit(QStringLiteral("Ernesto Acosta (elav)"), i18n("Reviews for Latte Dock, CandilDock and NowDock")
                     , QString(), QStringLiteral("https://github.com/elav"));
 
     // Translators
