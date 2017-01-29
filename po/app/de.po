@@ -7,16 +7,28 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/psifidotos/latte-dock/\n"
+<<<<<<< HEAD
 "POT-Creation-Date: 2017-01-24 09:37+0100\n"
 "PO-Revision-Date: 2017-01-24 15:58+0100\n"
 "Language-Team: Jan Neumann <neumdotjaatgmaildotcom>\n"
+=======
+"POT-Creation-Date: 2017-01-28 20:46+0200\n"
+"PO-Revision-Date: 2017-01-24 15:58+0100\n"
+"Last-Translator: \n"
+"Language-Team: Jan Neumann <neumdotjaatgmaildotcom>\n"
+"Language: de_DE\n"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 1.8.11\n"
+<<<<<<< HEAD
 "Last-Translator: \n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Language: de_DE\n"
+=======
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:59
 msgid "Applets Size"
@@ -35,9 +47,15 @@ msgid "Animations"
 msgstr "Animation"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:183
+<<<<<<< HEAD
 #: ../../shell/contents/configuration/AppearanceConfig.qml:310
 msgid "None"
 msgstr "Aus"
+=======
+#: ../../shell/contents/configuration/AppearanceConfig.qml:362
+msgid "None"
+msgstr "Keine"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:192
 msgid "x1"
@@ -60,6 +78,7 @@ msgid "Show Panel Background"
 msgstr "Zeige Hintergrund der Leiste"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:286
+<<<<<<< HEAD
 msgid "Shadows"
 msgstr "Schatten"
 
@@ -68,6 +87,21 @@ msgid "Only for locked applets"
 msgstr "Nur gesperrte Anwendungen"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:322
+=======
+#: ../../shell/contents/configuration/AppearanceConfig.qml:299
+msgid "Length"
+msgstr ""
+
+#: ../../shell/contents/configuration/AppearanceConfig.qml:338
+msgid "Shadows"
+msgstr "Schatten"
+
+#: ../../shell/contents/configuration/AppearanceConfig.qml:370
+msgid "Only for locked applets"
+msgstr "Nur gesperrte Anwendungen"
+
+#: ../../shell/contents/configuration/AppearanceConfig.qml:376
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 msgid "All applets"
 msgstr "Alle Anwendungen"
 
@@ -127,7 +161,11 @@ msgstr "Rechts"
 #: ../../shell/contents/configuration/BehaviorConfig.qml:214
 msgctxt "justify alignment"
 msgid "Justify"
+<<<<<<< HEAD
 msgstr "Abstandshalter"
+=======
+msgstr "Ausrichten"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:232
 msgid "Visibility"
@@ -139,7 +177,11 @@ msgstr "Immer sichtbar"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:266
 msgid "Auto Hide"
+<<<<<<< HEAD
 msgstr "Automatisch ausblenden"
+=======
+msgstr "Auto verbergen"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:275
 msgid "Dodge Active"
@@ -258,14 +300,22 @@ msgstr "Zeige nur Aufgaben dieses Arbeitsplatzes"
 msgid "Show only tasks from the current activity"
 msgstr "Zeige nur Aufgaben dieser Aktivität"
 
+<<<<<<< HEAD
 #: ../../app/dockview.cpp:784
+=======
+#: ../../app/dockview.cpp:718
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 msgctxt "%1 is the name of the containment"
 msgid "%1 Options"
 msgstr "%1 Optionen"
 
 #: ../../app/packageplugins/shell/dockpackage.cpp:44
 msgid "Latte Dock panel"
+<<<<<<< HEAD
 msgstr "Latte Dock panel"
+=======
+msgstr "Latte Dock Leiste"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af
 
 #: ../../app/packageplugins/shell/dockpackage.cpp:46
 msgid "Dock configuration UI"
@@ -285,4 +335,8 @@ msgstr "Dock für die Massen"
 
 #: rc.cpp:3
 msgid "Dock"
+<<<<<<< HEAD
 msgstr "Dock"
+=======
+msgstr "Leiste"
+>>>>>>> c4fcd9a7d30cf2fb6443c4f62882a783148e46af

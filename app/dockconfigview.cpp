@@ -62,6 +62,9 @@ DockConfigView::DockConfigView(Plasma::Containment *containment, DockView *dockV
         syncSlideEffect();
         QTimer::singleShot(200, this, &DockConfigView::syncGeometry);
     });
+
+    auto *dockCorona = qobject_cast<DockCorona *>(m_dockView->corona());
+    connections << connect(this, &DockConfigView::aboutApplication, dockCorona, &DockCorona::aboutApplication);
 }
 
 DockConfigView::~DockConfigView()
@@ -108,10 +111,10 @@ void DockConfigView::syncGeometry()
 
             if (location == Plasma::Types::TopEdge) {
                 setPosition(sGeometry.center().x() - size.width() / 2
-                            , m_dockView->currentThickness());
+                            , m_dockView->normalThickness());
             } else if (location == Plasma::Types::BottomEdge) {
                 setPosition(sGeometry.center().x() - size.width() / 2
-                            , sGeometry.height() - m_dockView->currentThickness() - size.height());
+                            , sGeometry.height() - m_dockView->normalThickness() - size.height());
             }
         }
         break;

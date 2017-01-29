@@ -49,7 +49,7 @@ DragDrop.DropArea {
     property bool editMode: plasmoid.userConfiguring
     property bool immutable: plasmoid.immutable
     property bool inStartup: true
-    property bool isHorizontal: plasmoid.formFactor == PlasmaCore.Types.Horizontal
+    property bool isHorizontal: plasmoid.formFactor === PlasmaCore.Types.Horizontal
     property bool isVertical: !isHorizontal
     property bool isHovered: nowDock ? ((nowDockHoveredIndex !== -1) && (layoutsContainer.hoveredIndex !== -1)) //|| wholeArea.containsMouse
                                      : (layoutsContainer.hoveredIndex !== -1) //|| wholeArea.containsMouse
@@ -71,6 +71,9 @@ DragDrop.DropArea {
                                                             plasmoid.configuration.iconSize
     property int iconStep: 8
     property int latteAppletPos: -1
+    property int maxLength: root.isHorizontal ? width * (plasmoid.configuration.maxLength/100)
+                                              : height * (plasmoid.configuration.maxLength/100)
+
     property int panelEdgeSpacing: iconSize / 3
     //FIXME: this is not needed any more probably
     property int previousAllTasks: -1    //is used to forbit updateAutomaticIconSize when hovering
@@ -79,6 +82,10 @@ DragDrop.DropArea {
     //this is set by the PanelBox
     property int shadowsSize: 0
     property int themePanelSize: plasmoid.configuration.panelSize
+
+    property int iconMargin: 0.12 * iconSize
+    property int statesLineSize: nowDock ?  Math.ceil( root.iconSize/13 ) : 0
+
 
     ///FIXME: <delete both> I can't remember why this is needed, maybe for the anchorings!!! In order for the Double Layout to not mess the anchorings...
     //property int mainLayoutPosition: !plasmoid.immutable ? Latte.Dock.Center : (root.isVertical ? Latte.Dock.Top : Latte.Dock.Left)
@@ -121,8 +128,6 @@ DragDrop.DropArea {
 
     property int durationTime: plasmoid.configuration.durationTime
     property int nowDockHoveredIndex: nowDock ? nowDock.hoveredIndex : -1
-    property int iconMargin: nowDock ? nowDock.iconMargin : 0.12 * iconSize
-    property int statesLineSize: nowDock ? nowDock.statesLineSize : 0
     property int tasksCount: nowDock ? nowDock.tasksCount : 0
     ///END properties from nowDock
 
@@ -400,7 +405,15 @@ DragDrop.DropArea {
 
     //// BEGIN OF Behaviors
     Behavior on iconSize {
-        NumberAnimation { duration: 200 }
+        NumberAnimation {
+            duration: 200
+
+            onRunningChanged: {
+                if (!running) {
+                    delayUpdateMaskArea.start();
+                }
+            }
+        }
     }
     //// END OF Behaviors
 
@@ -426,12 +439,6 @@ DragDrop.DropArea {
             dock.visibility.onContainsMouseChanged.connect(visibilityManager.slotContainsMouseChanged);
             dock.visibility.onMustBeHide.connect(visibilityManager.slotMustBeHide);
             dock.visibility.onMustBeShown.connect(visibilityManager.slotMustBeShown);
-
-            // adding the AppletQuickItem to the Now Dock in order to be
-            // used for right clicking events
-            for(var i=0; i<plasmoid.applets.length; ++i) {
-                dock.addAppletItem(plasmoid.applets[i]);
-            }
         }
     }
 
@@ -509,7 +516,21 @@ DragDrop.DropArea {
         }
     }
 
-    onIconSizeChanged: visibilityManager.updateMaskArea();
+    property bool automaticSizeAnimation: false;
+    onAutomaticIconSizeBasedSizeChanged: {
+        if (!automaticSizeAnimation) {
+            automaticSizeAnimation = true;
+            slotAnimationsNeedBothAxis(1);
+        }
+
+    }
+
+    onIconSizeChanged: {
+        if (((iconSize === automaticIconSizeBasedSize) || (iconSize === plasmoid.configuration.iconSize)) && automaticSizeAnimation){
+            slotAnimationsNeedBothAxis(-1);
+            automaticSizeAnimation=false;
+        }
+    }
 
     //  onIconSizeChanged: console.log("Icon Size Changed:"+iconSize);
 
@@ -539,8 +560,6 @@ DragDrop.DropArea {
     }
 
     Containment.onAppletRemoved: {
-        dock.removeAppletItem(applet)
-
         LayoutManager.removeApplet(applet);
         var flexibleFound = false;
         for (var i = 0; i < mainLayout.children.length; ++i) {
@@ -569,7 +588,7 @@ DragDrop.DropArea {
             return;
         }
 
-        console.debug("user configuring", plasmoid.userConfiguring)
+       // console.debug("user configuring", plasmoid.userConfiguring)
 
         if (plasmoid.userConfiguring) {
             dock.visibility.blockHiding = true;
@@ -652,10 +671,6 @@ DragDrop.DropArea {
         })
 
         addContainerInLayout(container, applet, x, y);
-
-        if(dock) {
-            dock.addAppletItem(applet);
-        }
     }
 
     function addContainerInLayout(container, applet, x, y){
@@ -855,6 +870,12 @@ DragDrop.DropArea {
 
         animationsNeedLength = Math.max(animationsNeedLength + step, 0);
 
+        //when need length animations are ended it would be a good idea
+        //to update the tasks geometries in the plasmoid
+        if(animationsNeedLength === 0 && nowDock) {
+            nowDock.publishTasksGeometries();
+        }
+
         visibilityManager.updateMaskArea();
     }
 
@@ -879,11 +900,10 @@ DragDrop.DropArea {
     }
 
     function updateAutomaticIconSize() {
-
-        if ((visibilityManager.normalState || root.editMode)
+        if ((visibilityManager.normalState && !root.editMode)
                 && (iconSize===plasmoid.configuration.iconSize || iconSize === automaticIconSizeBasedSize) ) {
             var layoutLength;
-            var maxLength = dock.maxLength;
+            var maxLength = root.maxLength;
             //console.log("------Entered check-----");
             //console.log("max length: "+ maxLength);
 
@@ -1065,14 +1085,14 @@ DragDrop.DropArea {
 
         x: (plasmoid.configuration.panelPosition === Latte.Dock.Justify) && root.isHorizontal
            && !root.editMode && windowSystem.compositingActive ?
-               (dock.width/2) - (dock.maxLength/2): 0
+               (dock.width/2) - (root.maxLength/2): 0
         y: (plasmoid.configuration.panelPosition === Latte.Dock.Justify) && root.isVertical
            && !root.editMode && windowSystem.compositingActive ?
-               (dock.height/2) - (dock.maxLength/2): 0
+               (dock.height/2) - (root.maxLength/2): 0
         width: (plasmoid.configuration.panelPosition === Latte.Dock.Justify) && root.isHorizontal && !root.editMode ?
-                   dock.maxLength : parent.width
+                   root.maxLength : parent.width
         height: (plasmoid.configuration.panelPosition === Latte.Dock.Justify) && root.isVertical && !root.editMode ?
-                    dock.maxLength : parent.height
+                    root.maxLength : parent.height
 
         Loader{
             anchors.fill: parent
@@ -1095,7 +1115,6 @@ DragDrop.DropArea {
             rows: root.isHorizontal ? 1 : 0
             rowSpacing: 0
 
-
             Layout.preferredWidth: width
             Layout.preferredHeight: height
 
@@ -1103,7 +1122,7 @@ DragDrop.DropArea {
 
             onWidthChanged: {
                 if (root.isHorizontal
-                        && ( (dock && (width+secondLayout.width >= dock.maxLength))
+                        && ( (dock && (width+secondLayout.width >= root.maxLength))
                             || (root.editMode)) ){
                     updateAutomaticIconSize();
                 }
@@ -1111,7 +1130,7 @@ DragDrop.DropArea {
 
             onHeightChanged: {
                 if (root.isVertical
-                        && ( (dock && (height+secondLayout.height >= dock.maxLength))
+                        && ( (dock && (height+secondLayout.height >= root.maxLength))
                             || (root.editMode)) ){
                     updateAutomaticIconSize();
                 }
@@ -1207,6 +1226,19 @@ DragDrop.DropArea {
         onTriggered: {
             if(!root.containsMouse())
                 root.clearZoom();
+        }
+    }
+
+    //this is a delayer to update mask area, it is used in cases
+    //that animations can not catch up with animations signals
+    //e.g. the automaicIconSize case
+    Timer{
+        id:delayUpdateMaskArea
+        repeat:false;
+        interval:300;
+
+        onTriggered: {
+            visibilityManager.updateMaskArea();
         }
     }
 

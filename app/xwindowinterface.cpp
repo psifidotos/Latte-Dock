@@ -190,10 +190,18 @@ bool XWindowInterface::isValidWindow(const KWindowInfo &winfo) const
                                           | NET::MenuMask | NET::SplashMask
                                           | NET::NormalMask);
 
-    if (winType == -1 || (winType & NET::Menu) || (winType & NET::Dock) || (winType & NET::Splash))
-        return false;
+    if (winType == -1) {
+        const KWindowInfo win{winfo.win(), 0, NET::WM2WindowClass};
 
-    return true;
+        // NOTE: Impossible to get type information from the spotify, then I need add a exception
+        // maybe is a bug of spotify.
+        if (win.windowClassName() == "spotify")
+            return true;
+        else
+            return false;
+    }
+
+    return !((winType & NET::Menu) || (winType & NET::Dock) || (winType & NET::Splash));
 }
 
 void XWindowInterface::windowChangedProxy(WId wid, NET::Properties prop1, NET::Properties2 prop2)

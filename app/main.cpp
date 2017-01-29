@@ -23,12 +23,14 @@
 #include <memory>
 
 #include <QApplication>
+#include <QDebug>
 #include <QQuickWindow>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
 #include <QDebug>
 
 #include <KLocalizedString>
+#include <KAboutData>
 
 //! COLORS
 #define CNORMAL  "\e[0m"
@@ -39,17 +41,23 @@
 #define CIRED    "\e[1;31m"
 #define CRED     "\e[0;31m"
 
-static const char version[] = "0.1";
+inline void configureAboutData();
+
+void noMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    Q_UNUSED(type);
+    Q_UNUSED(context);
+    Q_UNUSED(msg);
+}
 
 int main(int argc, char **argv)
 {
     QQuickWindow::setDefaultAlphaBuffer(true);
     QApplication app(argc, argv);
     KLocalizedString::setApplicationDomain("latte-dock");
-    app.setApplicationVersion(version);
-    app.setOrganizationDomain(QStringLiteral("latte-dock"));
-    app.setApplicationName(QStringLiteral("lattedock"));
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("latte-dock")));
+    configureAboutData();
+
     //! set pattern for debug messages
     //! [%{type}] [%{function}:%{line}] - %{message} [%{backtrace}]
     qSetMessagePattern(QStringLiteral(
@@ -60,7 +68,43 @@ int main(int argc, char **argv)
                            CICYAN " - " CNORMAL "%{message}"
                            CIRED "%{if-fatal}\n%{backtrace depth=8 separator=\"\n\"}%{endif}"
                            "%{if-critical}\n%{backtrace depth=8 separator=\"\n\"}%{endif}" CNORMAL));
+
     //  qputenv("QT_QUICK_CONTROLS_1_STYLE", "Desktop");
+    if (!app.arguments().contains(QLatin1String("--debug"))) {
+        qInstallMessageHandler(noMessageOutput);
+    }
+
     Latte::DockCorona corona;
     return app.exec();
+}
+
+inline void configureAboutData()
+{
+    KAboutData about(QStringLiteral("lattedock")
+                     , QStringLiteral("Latte Dock")
+                     , QStringLiteral(LATTE_VERSION)
+                     , i18n("Latte is a dock based on plasma frameworks that provides an elegant and intuitive experience for your tasks and plasmoids. It animates its contents by using parabolic zoom effect and trys to be there only when it is needed.\n\n\"Art in Coffee\"")
+                     , KAboutLicense::GPL_V2
+                     , QStringLiteral("\251 2016-2017 Michail Vourlakos, Smith AR"));
+
+    about.setBugAddress(BUG_ADDRESS);
+    about.setProgramLogo(QIcon::fromTheme(QStringLiteral("latte-dock")));
+    about.setDesktopFileName(QStringLiteral("latte-dock"));
+
+    // Authors
+    about.addAuthor(QStringLiteral("Michail Vourlakos"), QString(), QStringLiteral("mvourlakos@gmail.com"));
+    about.addAuthor(QStringLiteral("Smith AR"), QString(), QStringLiteral("audoban@openmailbox.org"));
+
+    // Credits
+    about.addCredit(QStringLiteral("varlesh"), i18n("Logo and Icons")
+                    , QString(), QStringLiteral("https://github.com/varlesh"));
+    about.addCredit(QStringLiteral("JenaPlinsky"), i18n("Many bug reports")
+                    , QString(), QStringLiteral("https://github.com/JenaPlinsky"));
+    about.addCredit(QStringLiteral("elav"), i18n("Reviews for Latte Dock, CandilDock and NowDock")
+                    , QString(), QStringLiteral("https://github.com/elav"));
+
+    // Translators
+    about.setTranslator(QStringLiteral(TRANSLATORS), QStringLiteral(TRANSLATORS_EMAIL));
+
+    KAboutData::setApplicationData(about);
 }

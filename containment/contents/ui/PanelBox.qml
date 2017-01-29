@@ -37,9 +37,9 @@ Item{
   //  parent: root
     z:0
 
-    property int panelWidth: secondLayout.count > 0 && root.isHorizontal && !root.editMode ?
+    property int panelWidth: (root.panelAlignment === Latte.Dock.Justify) && root.isHorizontal && !root.editMode ?
                                  layoutsContainer.width + 2*spacing : mainLayout.width + spacing
-    property int panelHeight: secondLayout.count > 0 && root.isVertical && !root.editMode ?
+    property int panelHeight: (root.panelAlignment === Latte.Dock.Justify) && root.isVertical && !root.editMode ?
                                   layoutsContainer.height + 2*spacing : mainLayout.height + spacing
 
     width: root.isHorizontal ? panelWidth : smallSize
@@ -97,8 +97,10 @@ Item{
 
         property int panelSize: ((plasmoid.location === PlasmaCore.Types.BottomEdge) ||
                                  (plasmoid.location === PlasmaCore.Types.TopEdge)) ?
-                                    root.themePanelSize + belower.height:
-                                    root.themePanelSize + belower.width
+                                    automaticPanelSize + belower.height:
+                                    automaticPanelSize + belower.width
+
+        property int automaticPanelSize: Math.min(root.themePanelSize, root.iconSize + root.statesLineSize)
 
         Behavior on opacity{
             NumberAnimation { duration: 200 }
@@ -107,8 +109,8 @@ Item{
         Binding {
             target: root
             property: "shadowsSize"
-            when: shadowsSvgItem && root.useThemePanel
-            value: root.isVertical ?  shadowsSvgItem.margins.top : shadowsSvgItem.margins.bottom
+            value: shadowsSvgItem && root.useThemePanel ?
+                       (root.isVertical ?  shadowsSvgItem.margins.top : shadowsSvgItem.margins.bottom) : 0
         }
 
         Binding {

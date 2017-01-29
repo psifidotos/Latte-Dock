@@ -32,8 +32,6 @@
 #include <QPointer>
 #include <QTimer>
 
-#include <PlasmaQuick/AppletQuickItem>
-
 namespace Plasma {
 class Types;
 class Corona;
@@ -48,8 +46,8 @@ class DockView : public PlasmaQuick::ContainmentView {
     Q_PROPERTY(int docksCount READ docksCount NOTIFY docksCountChanged)
     Q_PROPERTY(int width READ width NOTIFY widthChanged)
     Q_PROPERTY(int height READ height NOTIFY heightChanged)
-    Q_PROPERTY(int maxLength READ maxLength WRITE setMaxLength NOTIFY maxLengthChanged)
     Q_PROPERTY(int maxThickness READ maxThickness WRITE setMaxThickness NOTIFY maxThicknessChanged)
+    Q_PROPERTY(int normalThickness READ normalThickness WRITE setNormalThickness NOTIFY normalThicknessChanged)
     Q_PROPERTY(int shadow READ shadow WRITE setShadow NOTIFY shadowChanged)
 
     Q_PROPERTY(QRect maskArea READ maskArea WRITE setMaskArea NOTIFY maskAreaChanged)
@@ -72,11 +70,11 @@ public:
 
     int docksCount() const;
 
-    int maxLength() const;
-    void setMaxLength(int maxLength);
-
     int maxThickness() const;
     void setMaxThickness(int thickness);
+
+    int normalThickness() const;
+    void setNormalThickness(int thickness);
 
     int shadow() const;
     void setShadow(int shadow);
@@ -91,9 +89,6 @@ public:
     static QScreen *atScreens(QQmlListProperty<QScreen> *property, int index);
 
 public slots:
-    Q_INVOKABLE void addAppletItem(QObject *item);
-    Q_INVOKABLE void removeAppletItem(QObject *item);
-
     Q_INVOKABLE void addNewDock();
     Q_INVOKABLE void removeDock();
 
@@ -121,8 +116,8 @@ signals:
     void docksCountChanged();
     void widthChanged();
     void heightChanged();
-    void maxLengthChanged();
     void maxThicknessChanged();
+    void normalThicknessChanged();
     void visibilityChanged();
     void maskAreaChanged();
     void shadowChanged();
@@ -142,8 +137,10 @@ private:
     void updateFormFactor();
 
 private:
-    int m_maxLength{INT_MAX};
+    Plasma::Containment *containmentById(int id);
+
     int m_maxThickness{24};
+    int m_normalThickness{24};
     int m_shadow{0};
 
     QRect m_localDockGeometry;
@@ -151,7 +148,6 @@ private:
     QMenu *m_contextMenu;
     QPointer<PlasmaQuick::ConfigView> m_configView;
     QPointer<VisibilityManager> m_visibility;
-    QList<PlasmaQuick::AppletQuickItem *> m_appletItems;
 };
 
 }

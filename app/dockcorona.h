@@ -25,6 +25,8 @@
 
 #include <QObject>
 
+#include <KAboutApplicationDialog>
+
 namespace Plasma {
 class Corona;
 class Containment;
@@ -56,6 +58,7 @@ public:
 
     void addDock(Plasma::Containment *containment);
 
+    void aboutApplication();
     void closeApplication();
 
 public slots:
@@ -78,10 +81,13 @@ private:
     void qmlRegisterTypes() const;
     int primaryScreenId() const;
 
+    bool m_activitiesStarting{true};
+
     QHash<const Plasma::Containment *, DockView *> m_dockViews;
     QHash<const Plasma::Containment *, DockView *> m_waitingDockViews;
 
     KActivities::Consumer *m_activityConsumer;
+    QPointer<KAboutApplicationDialog> aboutDialog;
 };
 
 }

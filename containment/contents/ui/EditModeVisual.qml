@@ -23,10 +23,12 @@ import QtQuick 2.1
 import org.kde.plasma.core 2.0 as PlasmaCore
 import QtGraphicalEffects 1.0
 
+import org.kde.latte 0.1 as Latte
+
 Image{
     id: editVisual
-    width: root.isHorizontal ? parent.width : visibilityManager.thicknessNormalOriginalValue
-    height: root.isVertical ? parent.height : visibilityManager.thicknessNormalOriginalValue
+    width: root.isHorizontal ? root.maxLength : visibilityManager.thicknessNormalOriginalValue
+    height: root.isVertical ? root.maxLength : visibilityManager.thicknessNormalOriginalValue
 
     fillMode: Image.Tile
     source: "../icons/blueprint.jpg"
@@ -48,6 +50,17 @@ Image{
         color: "#ee080808"
     }
 
+
+    /*Behavior on width {
+        NumberAnimation { duration: 300 }
+        enabled: root.isHorizontal
+    }
+
+    Behavior on height {
+        NumberAnimation { duration: 300 }
+        enabled: root.isVertical
+    }*/
+
     Connections{
         target: plasmoid
         onLocationChanged: initializeEditPosition();
@@ -56,6 +69,7 @@ Image{
     Connections{
         target: root
         onIconSizeChanged: initializeEditPosition();
+        onPanelAlignmentChanged: initializeEditPosition();
     }
 
     onRootThicknessChanged: {
@@ -70,33 +84,84 @@ Image{
         }
     }
 
+    onWidthChanged: {
+        if (root.isHorizontal) {
+            initializeEditPosition();
+        }
+    }
+
+    onHeightChanged: {
+        if (root.isVertical) {
+            initializeEditPosition();
+        }
+    }
+
     function initializeNormalPosition() {
         if (plasmoid.location === PlasmaCore.Types.BottomEdge) {
-            x = 0;
             y = rootThickness;
         } else if (plasmoid.location === PlasmaCore.Types.RightEdge) {
             x = rootThickness;
-            y = 0;
         } else if (plasmoid.location === PlasmaCore.Types.LeftEdge) {
             x = -editVisual.thickness;
-            y = 0;
         } else if (plasmoid.location === PlasmaCore.Types.TopEdge) {
-            x = 0;
             y = -editVisual.thickness;
+        }
+
+        if (root.isHorizontal) {
+            if (plasmoid.configuration.panelPosition === Latte.Dock.Justify) {
+                x = root.width/2 - root.maxLength/2;
+            } else if (root.panelAlignment === Latte.Dock.Left) {
+                x = 0;
+            } else if (root.panelAlignment === Latte.Dock.Center) {
+                x = root.width/2 - root.maxLength/2;
+            } else if (root.panelAlignment === Latte.Dock.Right) {
+                x = root.width - root.maxLength;
+            }
+        } else if (root.isVertical) {
+            if (plasmoid.configuration.panelPosition === Latte.Dock.Justify) {
+                y = root.height/2 - root.maxLength/2;
+            } else if (root.panelAlignment === Latte.Dock.Top) {
+                y = 0;
+            } else if (root.panelAlignment === Latte.Dock.Center) {
+                y = root.height/2 - root.maxLength/2;
+            } else if (root.panelAlignment === Latte.Dock.Bottom) {
+                y = root.height - root.maxLength;
+            }
         }
     }
 
     function initializeEditPosition() {
         if (root.editMode) {
-            if ((plasmoid.location === PlasmaCore.Types.LeftEdge) || (plasmoid.location === PlasmaCore.Types.TopEdge)){
+            if (plasmoid.location === PlasmaCore.Types.LeftEdge){
                 x = 0;
+            } else if (plasmoid.location === PlasmaCore.Types.TopEdge) {
                 y = 0;
             } else if (plasmoid.location === PlasmaCore.Types.BottomEdge) {
-                x = 0;
                 y = rootThickness - thickness + shadowSize;
             } else if (plasmoid.location === PlasmaCore.Types.RightEdge) {
                 x = rootThickness - thickness + shadowSize;
-                y = 0;
+            }
+
+            if (root.isHorizontal) {
+                if (plasmoid.configuration.panelPosition === Latte.Dock.Justify) {
+                    x = root.width/2 - editVisual.width/2;
+                } else if (root.panelAlignment === Latte.Dock.Left) {
+                    x = 0;
+                } else if (root.panelAlignment === Latte.Dock.Center) {
+                    x = root.width/2 - editVisual.width/2;
+                } else if (root.panelAlignment === Latte.Dock.Right) {
+                    x = root.width - editVisual.width;
+                }
+            } else if (root.isVertical) {
+                if (plasmoid.configuration.panelPosition === Latte.Dock.Justify) {
+                    y = root.height/2 - editVisual.height/2;
+                } else if (root.panelAlignment === Latte.Dock.Top) {
+                    y = 0;
+                } else if (root.panelAlignment === Latte.Dock.Center) {
+                    y = root.height/2 - editVisual.height/2;
+                } else if (root.panelAlignment === Latte.Dock.Bottom) {
+                    y = root.height - editVisual.height;
+                }
             }
         }
     }

@@ -129,11 +129,6 @@ void DockView::adaptToScreen(QScreen *screen)
 {
     setScreen(screen);
 
-    if (formFactor() == Plasma::Types::Vertical)
-        m_maxLength = screen->size().height();
-    else
-        m_maxLength = screen->size().width();
-
     if (containment())
         containment()->reactToScreenChange();
 
@@ -272,26 +267,21 @@ void DockView::updatePosition()
     switch (location()) {
         case Plasma::Types::TopEdge:
             position = {screenGeometry.x(), screenGeometry.y()};
-            m_maxLength = screenGeometry.width();
             break;
         case Plasma::Types::BottomEdge:
             position = {screenGeometry.x(), screenGeometry.y() + screenGeometry.height() - height()};
-            m_maxLength = screenGeometry.width();
             break;
         case Plasma::Types::RightEdge:
             position = {screenGeometry.x() + screenGeometry.width() - width(), screenGeometry.y()};
-            m_maxLength = screenGeometry.height();
             break;
         case Plasma::Types::LeftEdge:
             position = {screenGeometry.x(), screenGeometry.y()};
-            m_maxLength = screenGeometry.height();
             break;
         default:
             qWarning() << "wrong location, couldn't update the panel position"
                        << location();
     }
 
-    emit maxLengthChanged();
     setPosition(position);
 }
 
@@ -300,7 +290,7 @@ inline void DockView::syncGeometry()
     resizeWindow();
     updatePosition();
     updateAbsDockGeometry();
-    qDebug() << "dock geometry:" << qRectToStr(geometry());
+    // qDebug() << "dock geometry:" << qRectToStr(geometry());
 }
 
 void DockView::statusChanged(Plasma::Types::ItemStatus status)
@@ -320,6 +310,22 @@ int DockView::currentThickness() const
     } else {
         return m_maskArea.isNull() ? height() : m_maskArea.height() - m_shadow;
     }
+}
+
+int DockView::normalThickness() const
+{
+    return m_normalThickness;
+}
+
+void DockView::setNormalThickness(int thickness)
+{
+    if (m_normalThickness == thickness) {
+        return;
+    }
+
+    m_normalThickness = thickness;
+
+    emit normalThicknessChanged();
 }
 
 int DockView::docksCount() const
@@ -366,20 +372,6 @@ void DockView::setMaxThickness(int thickness)
     m_maxThickness = thickness;
     syncGeometry();
     emit maxThicknessChanged();
-}
-
-int DockView::maxLength() const
-{
-    return m_maxLength;
-}
-
-void DockView::setMaxLength(int maxLength)
-{
-    if (m_maxLength == maxLength)
-        return;
-
-    m_maxLength = maxLength;
-    emit maxLengthChanged();
 }
 
 QRect DockView::maskArea() const
@@ -493,28 +485,6 @@ QVariantList DockView::containmentActions()
 
 
 //!BEGIN overriding context menus behavior
-void DockView::addAppletItem(QObject *item)
-{
-    PlasmaQuick::AppletQuickItem *dynItem = qobject_cast<PlasmaQuick::AppletQuickItem *>(item);
-
-    if (!dynItem || m_appletItems.contains(dynItem)) {
-        return;
-    }
-
-    m_appletItems.append(dynItem);
-}
-
-void DockView::removeAppletItem(QObject *item)
-{
-    PlasmaQuick::AppletQuickItem *dynItem = qobject_cast<PlasmaQuick::AppletQuickItem *>(item);
-
-    if (!dynItem) {
-        return;
-    }
-
-    m_appletItems.removeAll(dynItem);
-}
-
 void DockView::menuAboutToHide()
 {
     m_contextMenu = 0;
@@ -544,6 +514,7 @@ void DockView::mousePressEvent(QMouseEvent *event)
     //by the qml incubator when plasma is loading, so we need to guard there
     if (m_contextMenu) {
         m_contextMenu->close();
+        m_contextMenu = 0;
         PlasmaQuick::ContainmentView::mousePressEvent(event);
         return;
     }
@@ -573,21 +544,49 @@ void DockView::mousePressEvent(QMouseEvent *event)
         //qDebug() << "3...";
         //FIXME: very inefficient appletAt() implementation
         Plasma::Applet *applet = 0;
+        bool inSystray = false;
 
-        foreach (PlasmaQuick::AppletQuickItem *ai, m_appletItems) {
+        foreach (Plasma::Applet *appletTemp, containment()->applets()) {
+            PlasmaQuick::AppletQuickItem *ai = appletTemp->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
+
             if (ai && ai->isVisible() && ai->contains(ai->mapFromItem(contentItem(), event->pos()))) {
                 applet = ai->applet();
-                break;
-            } else {
-                ai = 0;
+                KPluginMetaData meta = applet->kPackage().metadata();
+
+                //Try to find applets inside a systray
+                if (meta.pluginId() == "org.kde.plasma.systemtray") {
+                    auto systrayId = applet->config().readEntry("SystrayContainmentId");
+
+                    applet = 0;
+                    inSystray = true;
+                    Plasma::Containment *cont = containmentById(systrayId.toInt());
+
+                    if (cont) {
+                        foreach (Plasma::Applet *appletCont, cont->applets()) {
+                            PlasmaQuick::AppletQuickItem *ai2 = appletCont->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
+
+                            if (ai2 && ai2->isVisible() && ai2->contains(ai2->mapFromItem(contentItem(), event->pos()))) {
+                                applet = ai2->applet();
+                                break;
+                            }
+                        }
+                    }
+
+                    break;
+                } else {
+                    ai = 0;
+                }
             }
+        }
+
+        if (!applet && !inSystray) {
+            applet = containment();
         }
 
         if (applet) {
             KPluginMetaData meta = applet->kPackage().metadata();
 
-            if ((meta.pluginId() != "org.kde.plasma.systemtray") &&
-                (meta.pluginId() != "org.kde.latte.plasmoid")) {
+            if (meta.pluginId() != "org.kde.latte.plasmoid") {
                 //qDebug() << "4...";
                 QMenu *desktopMenu = new QMenu;
                 desktopMenu->setAttribute(Qt::WA_DeleteOnClose);
@@ -595,14 +594,7 @@ void DockView::mousePressEvent(QMouseEvent *event)
 
                 if (this->mouseGrabberItem()) {
                     //workaround, this fixes for me most of the right click menu behavior
-                    if (applet) {
-                        KPluginMetaData meta = applet->kPackage().metadata();
-
-                        //gives the systemtray direct right click behavior for its applets
-                        if (meta.pluginId() != "org.kde.plasma.systemtray") {
-                            this->mouseGrabberItem()->ungrabMouse();
-                        }
-                    }
+                    this->mouseGrabberItem()->ungrabMouse();
 
                     return;
                 }
@@ -794,6 +786,18 @@ void DockView::addContainmentActions(QMenu *desktopMenu, QEvent *event)
 
     return;
 }
+
+Plasma::Containment *DockView::containmentById(int id)
+{
+    foreach (auto containment, corona()->containments()) {
+        if (id == containment->id()) {
+            return containment;
+        }
+    }
+
+    return 0;
+}
+
 //!END overriding context menus behavior
 
 }

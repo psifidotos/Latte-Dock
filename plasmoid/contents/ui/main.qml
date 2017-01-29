@@ -68,9 +68,6 @@ Item {
     property int clearWidth
     property int clearHeight
 
-    //property int iconMargin: 5
-    property int iconMargin: 0.12*iconSize
-
     property int newLocationDebugUse: PlasmaCore.Types.BottomPositioned
     property int newDroppedPosition: -1
     property int noInitCreatedBuffers: 0
@@ -80,7 +77,6 @@ Item {
     property int position : PlasmaCore.Types.BottomPositioned
     property int tasksStarting: 0
     property int realSize: iconSize + iconMargin
-    property int statesLineSize: Math.ceil( root.iconSize/13 )
 
     property real textColorLuma: 0.2126*theme.textColor.r + 0.7152*theme.textColor.g + 0.0722*theme.textColor.b
 
@@ -110,7 +106,9 @@ Item {
     property bool threeColorsWindows: nowDockPanel ? nowDockPanel.threeColorsWindows : plasmoid.configuration.threeColorsWindows
 
     property int durationTime: nowDockPanel ? nowDockPanel.durationTime : plasmoid.configuration.durationTime
+    property int iconMargin: nowDockPanel ? nowDockPanel.iconMargin : 0.12*iconSize
     property int iconSize: nowDockPanel ? nowDockPanel.iconSize : Math.max(plasmoid.configuration.iconSize, 16)
+    property int statesLineSize: nowDockPanel ? nowDockPanel.statesLineSize : Math.ceil( root.iconSize/13 )
     property int tasksHeight: mouseHandler.height
     property int tasksWidth: mouseHandler.width
     property int userPanelPosition: nowDockPanel ? nowDockPanel.panelAlignment : plasmoid.configuration.plasmoidPosition
@@ -212,7 +210,7 @@ Item {
         type: PlasmaCore.Dialog.Tooltip
         flags: Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
 
-        location: PlasmaCore.Types.Floating
+        location: plasmoid.location
 
         visible: false
 
@@ -349,7 +347,6 @@ Item {
 
         onAddLauncher: {
             tasksModel.requestAddLauncher(url);
-            // tasksModel.move(pos, newDroppedPosition);
         }
     }
 
@@ -587,7 +584,9 @@ Item {
 
             target: icList
 
-            property int maxSize: root.statesLineSize + root.iconSize + root.iconMargin - 1
+            property int maxSize: (root.hoveredIndex>=0 && !root.dragSource) ?
+                                      root.statesLineSize + root.zoomFactor * (root.iconSize + root.iconMargin) - 1 :
+                                      root.statesLineSize + root.iconSize + root.iconMargin - 1
 
             onUrlsDropped: {
                 // If all dropped URLs point to application desktop files, we'll add a launcher for each of them.
@@ -955,6 +954,13 @@ Item {
     }
 
     function addLauncher(url) {
+        //workaround to protect in case the launcher contains the iconData
+        var pos = url.indexOf("?iconData=");
+
+        if (pos>0) {
+            url = url.substring( 0, url.indexOf("?iconData=" ) );
+        }
+
         tasksModel.requestAddLauncher(url);
     }
 

@@ -21,6 +21,7 @@
 #include "dockcorona.h"
 #include "dockview.h"
 #include "packageplugins/shell/dockpackage.h"
+#include "../liblattedock/windowsystem.h"
 
 #include <QAction>
 #include <QScreen>
@@ -34,6 +35,7 @@
 #include <KLocalizedString>
 #include <KPackage/Package>
 #include <KPackage/PackageLoader>
+#include <KAboutData>
 
 #include <kactivities/consumer.h>
 
@@ -57,6 +59,11 @@ DockCorona::DockCorona(QObject *parent)
     setKPackage(package);
     qmlRegisterTypes();
     connect(this, &Corona::containmentAdded, this, &DockCorona::addDock);
+
+    if (m_activityConsumer && (m_activityConsumer->serviceStatus() == KActivities::Consumer::Running)) {
+        load();
+    }
+
     connect(m_activityConsumer, &KActivities::Consumer::serviceStatusChanged, this, &DockCorona::load);
 }
 
@@ -80,7 +87,10 @@ DockCorona::~DockCorona()
 
 void DockCorona::load()
 {
-    loadLayout();
+    if (m_activityConsumer && (m_activityConsumer->serviceStatus() == KActivities::Consumer::Running) && m_activitiesStarting) {
+        m_activitiesStarting = false;
+        loadLayout();
+    }
 }
 
 void DockCorona::cleanConfig()
@@ -219,13 +229,27 @@ int DockCorona::docksCount(int screen) const
         }
     }
 
-    qDebug() << docks << "docks on screen:" << screen;
+    // qDebug() << docks << "docks on screen:" << screen;
     return docks;
 }
 
 void DockCorona::closeApplication()
 {
     qGuiApp->quit();
+}
+
+void DockCorona::aboutApplication()
+{
+    if (aboutDialog) {
+        aboutDialog->hide();
+        aboutDialog->deleteLater();
+    }
+
+    aboutDialog = new KAboutApplicationDialog(KAboutData::applicationData());
+    connect(aboutDialog.data(), &QDialog::finished, aboutDialog.data(), &QObject::deleteLater);
+    WindowSystem::self().skipTaskBar(*aboutDialog);
+
+    aboutDialog->show();
 }
 
 QList<Plasma::Types::Location> DockCorona::freeEdges(int screen) const
