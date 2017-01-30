@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/psifidotos/latte-dock/\n"
 "POT-Creation-Date: 2017-01-29 15:48-0500\n"
-"PO-Revision-Date: 2017-01-24 15:58+0100\n"
-"Last-Translator: \n"
+"PO-Revision-Date: 2017-01-30 09:09+0100\n"
+"Last-Translator: Jan Neumann <neumdotjaatgmaildotcom>\n"
 "Language-Team: Jan Neumann <neumdotjaatgmaildotcom>\n"
 "Language: de_DE\n"
 "MIME-Version: 1.0\n"
@@ -66,15 +66,15 @@ msgstr "Länge"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:338
 msgid "Applet shadows"
-msgstr ""
+msgstr "Schatten "
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:370
 msgid "Locked"
-msgstr ""
+msgstr "Nur gesperrte"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:376
 msgid "All"
-msgstr ""
+msgstr "Alle"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:51
 msgid "Location"
@@ -272,7 +272,8 @@ msgstr "%1 Optionen"
 msgid ""
 "Latte is a dock based on plasma frameworks that provides an elegant and "
 "intuitive experience for your tasks and plasmoids. It animates its contents "
-"by using parabolic zoom effect and trys to be there only when it is needed.\n"
+"by using parabolic zoom effect and trys to be there only when it is "
+"needed.\n"
 "\n"
 "\"Art in Coffee\""
 msgstr ""
