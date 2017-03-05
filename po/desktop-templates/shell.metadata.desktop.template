@@ -1,9 +1,7 @@
 [Desktop Entry]
 Encoding=UTF-8
 Name=Latte Shell
-Name[de_DE]=Latte Shell
 Comment=Shell provided for the Latte Dock
-Comment[de_DE]=Shell für Latte Dock
 
 Keywords=shell
 Type=Service

@@ -1,8 +1,6 @@
 [Desktop Entry]
 Name=Latte Plasmoid
-Name[de_DE]=Latte Plasmoid
 Comment=Plasmoid from the Latte Dock
-Comment[de_DE]=Plasmoid für Latte Dock
 
 Type=Service
 Icon=latte-dock

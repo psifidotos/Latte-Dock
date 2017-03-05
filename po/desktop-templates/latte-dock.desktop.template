@@ -1,10 +1,7 @@
 [Desktop Entry]
 Name=Latte
-Name[de_DE]=Latte
 Comment=Dock for the masses
-Comment[de_DE]=Dock für die Massen
 GenericName=Dock
-GenericName[de_DE]=Dock
 
 Version=@VERSION@
 Categories=Utility;X-SuSE-DesktopUtility;
