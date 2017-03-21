@@ -10,11 +10,6 @@ Installation
 ```
 sudo apt install g++ cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extras5-dev libkf5iconthemes-dev libkf5plasma-dev libkf5windowsystem-dev libkf5declarative-dev libkf5xmlgui-dev libkf5activities-dev gettext libkf5wayland-dev libxcb-util0-dev
 ```
-### Debian 8.7.0 (Jessie)
-
-```
-sudo apt install g++ cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extras5-dev libkf5iconthemes-dev libkf5plasma-dev libkf5windowsystem-dev libkf5declarative-dev libkf5xmlgui-dev libkf5activities-dev gettext libkf5wayland-dev libxcb-util0-dev
-```
 
 ### Kubuntu 16.10
 
@@ -22,7 +17,7 @@ sudo apt install g++ cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extra
 sudo add-apt-repository ppa:kubuntu-ppa/backports
 sudo apt update 
 sudo apt dist-upgrade 
-sudo apt install cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extras5-dev libkf5iconthemes-dev libkf5plasma-dev libkf5windowsystem-dev libkf5declarative-dev libkf5xmlgui-dev libkf5activities-dev 
+sudo apt install cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extras5-dev libkf5iconthemes-dev libkf5plasma-dev libkf5windowsystem-dev libkf5declarative-dev libkf5xmlgui-dev libkf5activities-dev gettext libkf5wayland-dev libxcb-util0-dev
 ```
 
 ### Arch Linux
