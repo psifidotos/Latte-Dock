@@ -1,7 +1,7 @@
 Installation
 ============
 
-## 1. Dependencies
+### 1. Dependencies
 
 **Before running the installation script you have to install the dependencies needed for compiling.**
 
