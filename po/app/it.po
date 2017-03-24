@@ -100,8 +100,7 @@ msgstr "Mostra i messaggi di debug sullo stdout"
 #: ../../app/main.cpp:78
 msgctxt "command line"
 msgid "Show messages of debugging for the mask (Only useful to devs)."
-msgstr ""
-"Mostra i messaggi di debug per la maschera (utile solo per gli sviluppatori)"
+msgstr "Mostra i messaggi di debug per la maschera (utile solo per gli sviluppatori)"
 
 #: ../../app/main.cpp:79
 msgctxt "command line"
@@ -430,7 +429,6 @@ msgstr "Azione mouse click-centrale:"
 
 #: ../../shell/contents/configuration/TasksConfig.qml:165
 #: ../../shell/contents/configuration/TasksConfig.qml:205
-#, fuzzy
 msgctxt "The click action"
 msgid "None"
 msgstr "Nessuna"
@@ -492,7 +490,7 @@ msgstr "Abilita avvio automatico durante la fase di avvio"
 
 #: ../../shell/contents/configuration/TweaksConfig.qml:95
 msgid "Decrease applets size when it is needed"
-msgstr "Diminuzione dimensione delle icone quando è necessario"
+msgstr "Scalatura delle icone quando è necessario"
 
 #: ../../shell/contents/configuration/TweaksConfig.qml:106
 #, fuzzy
