@@ -17,7 +17,7 @@ Repositories
 
 [ArchLinux AUR](https://www.archlinux.org/packages/?sort=&q=latte-dock)
 
-[Ubuntu Deb Packages](https://github.com/ubuntuvibes/Debs/blob/master/latte-dock_0.6.0-1_all.deb)
+[Ubuntu Deb Packages](https://github.com/ubuntuvibes/Debs)
 
 Requirements
 ============
