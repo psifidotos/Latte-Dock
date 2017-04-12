@@ -47,6 +47,11 @@ We recommend that you use at least **Plasma 5.8.0**
 sudo pacman -Sy latte-dock
 ```
 
+### Gentoo
+
+- [Gentoo package](https://github.com/redcorelinux/redcore-desktop/blob/master/kde-apps/latte-dock/latte-dock-0.6.0.ebuild)
+
+
 ## Using installation script
 
 **Before running the installation script you have to install the dependencies needed for compiling.**
