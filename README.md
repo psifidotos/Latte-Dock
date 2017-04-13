@@ -10,6 +10,8 @@ Installation
 Please run  ```./install.sh``` script.
 After the installation has completed successfully, you can execute ```latte-dock``` or search *Latte Dock* on your menu of applications.
 
+Fedora option: you can build an rpm package with rpm/Latte-Dock.spec
+
 Repositories
 ===========
 
