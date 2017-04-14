@@ -21,7 +21,6 @@
 #ifndef VISIBILITYMANAGER_H
 #define VISIBILITYMANAGER_H
 
-#include "plasmaquick/containmentview.h"
 #include "../liblattedock/dock.h"
 
 #include <QObject>
@@ -32,6 +31,7 @@
 namespace Latte {
 
 class VisibilityManagerPrivate;
+class DockView;
 
 class VisibilityManager : public QObject {
     Q_OBJECT
@@ -42,11 +42,13 @@ class VisibilityManager : public QObject {
     Q_PROPERTY(bool isHidden READ isHidden WRITE setIsHidden NOTIFY isHiddenChanged)
     Q_PROPERTY(bool blockHiding READ blockHiding WRITE setBlockHiding NOTIFY blockHidingChanged)
     Q_PROPERTY(bool containsMouse READ containsMouse NOTIFY containsMouseChanged)
+    Q_PROPERTY(bool edgePressure READ edgePressure WRITE setEdgePressure NOTIFY edgePressureChanged);
     Q_PROPERTY(int timerShow READ timerShow WRITE setTimerShow NOTIFY timerShowChanged)
     Q_PROPERTY(int timerHide READ timerHide WRITE setTimerHide NOTIFY timerHideChanged)
 
+
 public:
-    explicit VisibilityManager(PlasmaQuick::ContainmentView *view);
+    VisibilityManager(DockView* view);
     virtual ~VisibilityManager();
 
     Latte::Dock::Visibility mode() const;
@@ -66,6 +68,9 @@ public:
 
     bool containsMouse() const;
 
+    bool edgePressure() const;
+    void setEdgePressure(bool enable);
+
     int timerShow() const;
     void setTimerShow(int msec);
 
@@ -82,6 +87,7 @@ signals:
     void isHiddenChanged();
     void blockHidingChanged();
     void containsMouseChanged();
+    void edgePressureChanged();
     void timerShowChanged();
     void timerHideChanged();
 

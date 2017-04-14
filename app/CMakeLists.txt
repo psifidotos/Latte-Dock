@@ -4,6 +4,7 @@ set(lattedock-app_SRCS
     abstractwindowinterface.cpp
     xwindowinterface.cpp
     windowinfowrap.cpp
+    edgepressure.cpp
     visibilitymanager.cpp
     dockcorona.cpp
     dockview.cpp
@@ -43,9 +44,11 @@ target_link_libraries(latte-dock
 )
 
 if(HAVE_X11)
+    #TODO: import libXi library with CMake
     target_link_libraries(latte-dock
         Qt5::X11Extras
         KF5::WindowSystem
+        "/usr/lib64/libXi.so"
         ${X11_LIBRARIES}
         ${XCB_LIBRARIES}
     )

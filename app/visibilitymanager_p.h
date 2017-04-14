@@ -4,6 +4,8 @@
 #include "../liblattedock/dock.h"
 #include "windowinfowrap.h"
 #include "abstractwindowinterface.h"
+#include "edgepressure.h"
+#include "dockview.h"
 
 #include <unordered_map>
 #include <memory>
@@ -11,8 +13,6 @@
 #include <QObject>
 #include <QTimer>
 #include <QEvent>
-
-#include <plasmaquick/containmentview.h>
 
 namespace Latte {
 
@@ -25,7 +25,7 @@ class VisibilityManagerPrivate : public QObject {
     Q_GADGET
 
 public:
-    VisibilityManagerPrivate(PlasmaQuick::ContainmentView *view, VisibilityManager *q);
+    VisibilityManagerPrivate(DockView* view, VisibilityManager* q);
     ~VisibilityManagerPrivate();
 
     void setMode(Dock::Visibility mode);
@@ -36,6 +36,7 @@ public:
     void setBlockHiding(bool blockHiding);
     void setTimerShow(int msec);
     void setTimerHide(int msec);
+    void setEnablePressure(bool enable);
 
     void raiseDock(bool raise);
     void raiseDockTemporarily();
@@ -62,12 +63,15 @@ public:
     Dock::Visibility mode{Dock::None};
     std::array<QMetaObject::Connection, 5> connections;
     std::unordered_map<WId, WindowInfoWrap> windows;
+    EdgePressure edgePressure;
+
     QTimer timerShow;
     QTimer timerHide;
     QTimer timerCheckWindows;
     QTimer timerStartUp;
     QRect dockGeometry;
     bool isHidden{false};
+    bool pressureActive{true};
     bool dragEnter{false};
     bool blockHiding{false};
     bool containsMouse{false};

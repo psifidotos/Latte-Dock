@@ -25,6 +25,14 @@ unique_ptr<T> make_unique(Args &&... args)
 }
 #endif
 
+
+struct pod_deleter {
+    template <typename T>
+    void operator()(T* pointer) {
+        free(pointer);
+    }
+};
+
 /*!
  * @brief convert a QRect to a QString with format `(<x>, <y>) <width>x<height>`
  */

@@ -21,7 +21,6 @@
 #include "visibilitymanager.h"
 #include "visibilitymanager_p.h"
 #include "windowinfowrap.h"
-#include "dockview.h"
 #include "dockcorona.h"
 #include "../liblattedock/extras.h"
 
@@ -30,15 +29,12 @@
 namespace Latte {
 
 //! BEGIN: VisiblityManagerPrivate implementation
-VisibilityManagerPrivate::VisibilityManagerPrivate(PlasmaQuick::ContainmentView *view, VisibilityManager *q)
-    : QObject(nullptr), q(q), view(view), wm(&WindowSystem::self())
+VisibilityManagerPrivate::VisibilityManagerPrivate(Latte::DockView *view, VisibilityManager *q)
+    : QObject(nullptr), q(q), view(view), wm(&WindowSystem::self()), edgePressure(view)
 {
-    DockView *dockView = qobject_cast<DockView *>(view);
 
-    if (dockView) {
-        connect(dockView, &DockView::eventTriggered, this, &VisibilityManagerPrivate::viewEventManager);
-        connect(dockView, &DockView::absGeometryChanged, this, &VisibilityManagerPrivate::setDockGeometry);
-    }
+    connect(view, &DockView::eventTriggered, this, &VisibilityManagerPrivate::viewEventManager);
+    connect(view, &DockView::absGeometryChanged, this, &VisibilityManagerPrivate::setDockGeometry);
 
     timerStartUp.setInterval(5000);
     timerStartUp.setSingleShot(true);
@@ -59,10 +55,16 @@ VisibilityManagerPrivate::VisibilityManagerPrivate(PlasmaQuick::ContainmentView 
             emit this->q->mustBeHide(VisibilityManager::QPrivateSignal{});
         }
     });
+    connect(&edgePressure, &EdgePressure::threshold, this, [this]() {
+        if (isHidden) {
+            //   qDebug() << "must be shown";
+            emit this->q->mustBeShown(VisibilityManager::QPrivateSignal{});
+        }
+    });
+
     wm->setDockExtraFlags(*view);
     wm->addDock(view->winId());
     restoreConfig();
-
 }
 
 VisibilityManagerPrivate::~VisibilityManagerPrivate()
@@ -106,6 +108,8 @@ inline void VisibilityManagerPrivate::setMode(Dock::Visibility mode)
     timerCheckWindows.stop();
     this->mode = mode;
 
+    setEnablePressure(pressureActive);
+
     switch (this->mode) {
         case Dock::AlwaysVisible: {
             if (view->containment() && !view->containment()->isUserConfiguring() && view->screen()) {
@@ -123,6 +127,7 @@ inline void VisibilityManagerPrivate::setMode(Dock::Visibility mode)
                     wm->setDockStruts(view->winId(), dockGeometry, *view->screen(), view->containment()->location());
             });
             raiseDock(true);
+
         }
         break;
 
@@ -137,6 +142,7 @@ inline void VisibilityManagerPrivate::setMode(Dock::Visibility mode)
             connections[1] = connect(wm, &WindowSystem::windowChanged
                                      , this, &VisibilityManagerPrivate::dodgeActive);
             dodgeActive(wm->activeWindow());
+
         }
         break;
 
@@ -146,6 +152,7 @@ inline void VisibilityManagerPrivate::setMode(Dock::Visibility mode)
             connections[1] = connect(wm, &WindowSystem::windowChanged
                                      , this, &VisibilityManagerPrivate::dodgeMaximized);
             dodgeMaximized(wm->activeWindow());
+
         }
         break;
 
@@ -168,11 +175,14 @@ inline void VisibilityManagerPrivate::setMode(Dock::Visibility mode)
             });
 
             timerCheckWindows.start();
+
         }
         break;
         case Dock::WindowsGoBelow: {
-            //
+            raiseDock(true);
         }
+        default:
+            break;
     }
 
     view->containment()->config().writeEntry("visibility", static_cast<int>(mode));
@@ -247,6 +257,23 @@ inline void VisibilityManagerPrivate::setTimerHide(int msec)
     emit q->timerHideChanged();
 }
 
+void VisibilityManagerPrivate::setEnablePressure(bool enable)
+{
+    pressureActive = enable;
+
+    if (mode == Dock::AlwaysVisible || mode == Dock::WindowsGoBelow) {
+        edgePressure.deleteBarrier();
+
+    } else {
+        if (!pressureActive)
+            edgePressure.deleteBarrier();
+        else
+            edgePressure.updateBarrier();
+
+        emit q->edgePressureChanged();
+    }
+}
+
 inline void VisibilityManagerPrivate::raiseDock(bool raise)
 {
     if (blockHiding)
@@ -255,7 +282,10 @@ inline void VisibilityManagerPrivate::raiseDock(bool raise)
     if (raise) {
         timerHide.stop();
 
-        if (!timerShow.isActive()) {
+        if (edgePressure.enabled()) {
+            if (isHidden) emit q->mustBeShown(VisibilityManager::QPrivateSignal{});
+
+        } else if (!timerShow.isActive()) {
             timerShow.start();
         }
     } else if (!dragEnter) {
@@ -309,6 +339,9 @@ void VisibilityManagerPrivate::updateHiddenState()
         case Dock::DodgeAllWindows:
             dodgeWindows(wm->activeWindow());
             break;
+
+        default:
+            break;
     }
 }
 
@@ -321,6 +354,10 @@ inline void VisibilityManagerPrivate::setDockGeometry(const QRect &geometry)
 
     if (mode == Dock::AlwaysVisible && !view->containment()->isUserConfiguring() && view->screen()) {
         wm->setDockStruts(view->winId(), this->dockGeometry, *view->screen(), view->containment()->location());
+    }
+
+    if (pressureActive && mode != Dock::AlwaysVisible && mode != Dock::WindowsGoBelow) {
+        edgePressure.updateBarrier();
     }
 }
 
@@ -439,6 +476,8 @@ inline void VisibilityManagerPrivate::saveConfig()
     config.writeEntry("timerHide", timerHide.interval());
     config.writeEntry("raiseOnDesktopChange", raiseOnDesktopChange);
     config.writeEntry("raiseOnActivityChange", raiseOnActivityChange);
+    config.writeEntry("edgePressure", pressureActive);
+
     view->containment()->configNeedsSaving();
 }
 
@@ -455,14 +494,18 @@ inline void VisibilityManagerPrivate::restoreConfig()
 
     setRaiseOnDesktop(config.readEntry("raiseOnDesktopChange", false));
     setRaiseOnActivity(config.readEntry("raiseOnActivityChange", false));
+    setEnablePressure(true);
+    //setEnablePressure(config.readEntry("edgePressure", false));
 
     auto mode = [&]() {
           return static_cast<Dock::Visibility>(view->containment()->config()
                     .readEntry("visibility", static_cast<int>(Dock::DodgeActive)));
     };
 
-    if (mode() == Dock::AlwaysVisible) {
-        setMode(Dock::AlwaysVisible);
+    auto m = mode();
+
+    if (m == Dock::AlwaysVisible || m == Dock::WindowsGoBelow) {
+        setMode(m);
     } else {
         connect(&timerStartUp, &QTimer::timeout, this, [&, mode]() {
             setMode(mode());
@@ -493,8 +536,10 @@ void VisibilityManagerPrivate::viewEventManager(QEvent *ev)
             containsMouse = true;
             emit q->containsMouseChanged();
 
-            if (mode != Dock::AlwaysVisible)
-                raiseDock(true);
+            if (mode != Dock::AlwaysVisible && mode != Dock::WindowsGoBelow) {
+                if (!edgePressure.enabled())
+                    raiseDock(true);
+            }
 
             break;
 
@@ -524,12 +569,15 @@ void VisibilityManagerPrivate::viewEventManager(QEvent *ev)
         case QEvent::Show:
             wm->setDockExtraFlags(*view);
             break;
+
+        default:
+            break;
     }
 }
 //! END: VisibilityManagerPrivate implementation
 
 //! BEGIN: VisiblityManager implementation
-VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
+VisibilityManager::VisibilityManager(Latte::DockView *view)
     : d(new VisibilityManagerPrivate(view, this))
 {
 }
@@ -593,6 +641,16 @@ void VisibilityManager::setBlockHiding(bool blockHiding)
 bool VisibilityManager::containsMouse() const
 {
     return d->containsMouse;
+}
+
+bool VisibilityManager::edgePressure() const
+{
+    return d->pressureActive;
+}
+
+void VisibilityManager::setEdgePressure(bool enable)
+{
+    return d->setEnablePressure(enable);
 }
 
 int VisibilityManager::timerShow() const
