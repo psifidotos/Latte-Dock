@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/psifidotos/latte-dock/\n"
 "POT-Creation-Date: 2017-03-22 21:16+0200\n"
-"PO-Revision-Date: 2017-04-21 17:25+0100\n"
+"PO-Revision-Date: 2017-04-21 17:51+0100\n"
 "Last-Translator: Kamil Sm <blackdragondev85@gmail.com>\n"
 "Language-Team: Polish <kde-i18n-doc@kde.org>\n"
 "Language: pl\n"
@@ -150,7 +150,7 @@ msgstr ""
 
 #: ../../app/main.cpp:165
 msgid "Logo and Icons"
-msgstr "Logo i Ikony"
+msgstr ""
 
 #: ../../app/main.cpp:167
 msgid "Many bug reports"
@@ -158,7 +158,7 @@ msgstr ""
 
 #: ../../app/main.cpp:169
 msgid "Reviews for Latte Dock, CandilDock and NowDock"
-msgstr "Opinie o LatteDock, CandilDock i NowDock"
+msgstr ""
 
 #: ../../app/packageplugins/shell/dockpackage.cpp:44
 #, fuzzy
@@ -182,9 +182,8 @@ msgid "Screen Height Proportion:"
 msgstr "Proporcje wysokości ekranu:"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:156
-#, fuzzy
 msgid "Applets Distance:"
-msgstr "Wielkość Apletów"
+msgstr "Odległości między apletami:"
 
 #: ../../shell/contents/configuration/AppearanceConfig.qml:193
 msgid "Zoom On Hover"
@@ -258,16 +257,14 @@ msgid "Screen:"
 msgstr "Ekranie:"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:194
-#, fuzzy
 msgctxt "bottom location"
 msgid "Bottom"
 msgstr "Dół"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:205
-#, fuzzy
 msgctxt "left location"
 msgid "Left"
-msgstr "Lewa"
+msgstr "Lewo"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:216
 #, fuzzy
@@ -276,50 +273,43 @@ msgid "Top"
 msgstr "Góra"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:227
-#, fuzzy
 msgctxt "right location"
 msgid "Right"
-msgstr "Prawa"
+msgstr "Prawo"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:246
-#, fuzzy
 msgid "Alignment"
-msgstr "Wyrównanie Apletów "
+msgstr "Wyrównanie Apletów"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:281
-#, fuzzy
 msgctxt "top alignment"
 msgid "Top"
 msgstr "Góra"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:281
-#, fuzzy
 msgctxt "left alignment"
 msgid "Left"
-msgstr "Lewa"
+msgstr "Lewo"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:291
-#, fuzzy
 msgctxt "center alignment"
 msgid "Center"
 msgstr "Środek"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:301
-#, fuzzy
 msgctxt "bottom alignment"
 msgid "Bottom"
 msgstr "Dół"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:301
-#, fuzzy
 msgctxt "right alignment"
 msgid "Right"
-msgstr "Prawa"
+msgstr "Prawo"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:312
 msgctxt "justify alignment"
 msgid "Justify"
-msgstr "Justowanie"
+msgstr "Wyrównanie"
 
 #: ../../shell/contents/configuration/BehaviorConfig.qml:330
 msgid "Visibility"
@@ -494,9 +484,8 @@ msgid "Show only tasks from the current activity"
 msgstr "Pokaż zadania tylko z bieżącej aktywności"
 
 #: ../../shell/contents/configuration/TweaksConfig.qml:54
-#, fuzzy
 msgid "Blur for panel background"
-msgstr "Pokaż Tło Panelu"
+msgstr "Rozmycie tła panelu"
 
 #: ../../shell/contents/configuration/TweaksConfig.qml:65
 msgid "Shrink thickness margins to minimum"
@@ -516,7 +505,7 @@ msgstr "Dodaj skróty tylko w odpowiednim miejscu"
 
 #: ../../shell/contents/configuration/TweaksConfig.qml:117
 msgid "Behave as a normal dock window"
-msgstr "Zachowuj się jak normalne okno docku"
+msgstr "Zachowuj się jak okno, do którego można przypiąć inne"
 
 #: ../../shell/contents/configuration/TweaksConfig.qml:128
 msgid "Show Alternative Session in the context menu"
