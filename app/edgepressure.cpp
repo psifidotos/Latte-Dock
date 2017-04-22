@@ -23,6 +23,7 @@
 #include "edgepressure.h"
 #include "dockview.h"
 #include "plasmaquick/containmentview.h"
+#include "screenpool.h"
 
 #include <cmath>
 #include <algorithm>
@@ -60,7 +61,7 @@ public:
 #if HAVE_X11
     void initBarrierX11();
     void updateBarrierX11();
-    void processBarrierX11(xcb_input_barrier_hit_event_t *event);
+    inline void processBarrierX11(xcb_input_barrier_hit_event_t *event);
     void deleteBarrierX11();
 
     xcb_connection_t *connection {nullptr};
@@ -185,7 +186,7 @@ void Latte::EdgePressure::Private::updateBarrierX11()
         case Plasma::Types::RightEdge:
             cookie = xcb_xfixes_create_pointer_barrier_checked(connection
             , barrier, QX11Info::appRootWindow()
-            , rect.right() + 1, rect.top(), rect.right() + 1, rect.bottom()
+            , rect.right() + 2, rect.top(), rect.right() + 2, rect.bottom()
             , XCB_XFIXES_BARRIER_DIRECTIONS_NEGATIVE_X
             , 0, nullptr);
             break;
@@ -196,15 +197,15 @@ void Latte::EdgePressure::Private::updateBarrierX11()
 
     std::unique_ptr<xcb_generic_error_t, pod_deleter> error{xcb_request_check(connection, cookie)};
     if (error) {
-        qDebug() << "the barrier can't be created, winId" << view->winId() << ", error code", error->error_code;
+        qDebug() << "the barrier can't be created, winId" << view->winId() << "error code", error->error_code;
     } else {
-        qDebug() << "the barrier has been updated, winId" << view->winId();
+        qDebug() << "the barrier has been updated, winId" << view->winId() << rect;
     }
 
     qGuiApp->installNativeEventFilter(this);
 }
 
-void Latte::EdgePressure::Private::processBarrierX11(xcb_input_barrier_hit_event_t *event)
+inline void Latte::EdgePressure::Private::processBarrierX11(xcb_input_barrier_hit_event_t *event)
 {
     uint slide{0};
     uint distance{0};
@@ -271,16 +272,20 @@ bool Latte::EdgePressure::Private::nativeEventFilter(const QByteArray& eventType
             case XCB_INPUT_BARRIER_HIT: {
                 auto hit = static_cast<xcb_input_barrier_hit_event_t *>(message);
 
-                if (hit->barrier == barrier)
+                if (hit->barrier == barrier) {
                     processBarrierX11(hit);
+                    return true;
+                }
             }
             return false;
 
             case XCB_INPUT_BARRIER_LEAVE: {
                 auto leave = static_cast<xcb_input_barrier_leave_event_t *>(message);
 
-                if (leave->barrier == barrier)
+                if (leave->barrier == barrier) {
                     pressure = 0;
+                    return true;
+                }
             }
             return false;
         }
