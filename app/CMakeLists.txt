@@ -48,7 +48,7 @@ if(HAVE_X11)
     target_link_libraries(latte-dock
         Qt5::X11Extras
         KF5::WindowSystem
-        "/usr/lib64/libXi.so"
+        ${XI_LIBRARY}
         ${X11_LIBRARIES}
         ${XCB_LIBRARIES}
     )
