@@ -41,7 +41,6 @@
     #include <xcb/xfixes.h>
     #include <xcb/xinput.h>
     #include <xcb/xcb_event.h>
-    #include <xcb/xproto.h>
     #include <QX11Info>
 #endif
 
