@@ -31,6 +31,7 @@
 namespace Latte {
 
 class VisibilityManagerPrivate;
+class EdgePressure;
 class DockView;
 
 class VisibilityManager : public QObject {
@@ -39,13 +40,13 @@ class VisibilityManager : public QObject {
     Q_PROPERTY(Latte::Dock::Visibility mode READ mode WRITE setMode NOTIFY modeChanged)
     Q_PROPERTY(bool raiseOnDesktop READ raiseOnDesktop WRITE setRaiseOnDesktop NOTIFY raiseOnDesktopChanged)
     Q_PROPERTY(bool raiseOnActivity READ raiseOnActivity WRITE setRaiseOnActivity NOTIFY raiseOnActivityChanged)
+    Q_PROPERTY(bool edgePressure READ edgePressure WRITE setEdgePressure NOTIFY edgePressureChanged)
     Q_PROPERTY(bool isHidden READ isHidden WRITE setIsHidden NOTIFY isHiddenChanged)
     Q_PROPERTY(bool blockHiding READ blockHiding WRITE setBlockHiding NOTIFY blockHidingChanged)
     Q_PROPERTY(bool containsMouse READ containsMouse NOTIFY containsMouseChanged)
-    Q_PROPERTY(bool edgePressure READ edgePressure WRITE setEdgePressure NOTIFY edgePressureChanged);
     Q_PROPERTY(int timerShow READ timerShow WRITE setTimerShow NOTIFY timerShowChanged)
     Q_PROPERTY(int timerHide READ timerHide WRITE setTimerHide NOTIFY timerHideChanged)
-
+    Q_PROPERTY(EdgePressure *pressure READ pressure CONSTANT)
 
 public:
     VisibilityManager(DockView* view);
@@ -60,6 +61,9 @@ public:
     bool raiseOnActivity() const;
     void setRaiseOnActivity(bool enable);
 
+    bool edgePressure() const;
+    void setEdgePressure(bool enable);
+
     bool isHidden() const;
     void setIsHidden(bool isHidden);
 
@@ -68,14 +72,13 @@ public:
 
     bool containsMouse() const;
 
-    bool edgePressure() const;
-    void setEdgePressure(bool enable);
-
     int timerShow() const;
     void setTimerShow(int msec);
 
     int timerHide() const;
     void setTimerHide(int msec);
+
+    EdgePressure * pressure() const;
 
 signals:
     void mustBeShown(QPrivateSignal);

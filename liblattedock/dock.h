@@ -32,7 +32,6 @@ class Dock {
 
 public:
     Dock() = delete;
-    ~Dock() {}
 
     enum Visibility {
         None = -1,
@@ -54,6 +53,13 @@ public:
         Justify = 10
     };
     Q_ENUM(Alignment)
+
+    enum PressureThreshold {
+       ThresholdLow = 30,
+       ThresholdMedium = 60,
+       ThresholdHigh = 80
+    };
+    Q_ENUM(PressureThreshold)
 
     enum SessionType {
         DefaultSession = 0,

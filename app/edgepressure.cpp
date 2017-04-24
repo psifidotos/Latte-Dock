@@ -68,11 +68,10 @@ public:
     xcb_xfixes_barrier_t barrier {0};
 #endif
 
-    std::unique_ptr<_BarrierSupport> BarrierSupport;
     DockView *view;
     EdgePressure *q;
-
-    uint pressureThreshold{60};
+    std::unique_ptr<_BarrierSupport> BarrierSupport;
+    uint pressureThreshold{Dock::ThresholdMedium};
     uint pressure{0};
 
 protected:
@@ -227,7 +226,7 @@ inline void Latte::EdgePressure::Private::processBarrierX11(xcb_input_barrier_hi
         pressure = 0;
         qDebug() << "pressure threshold reached:" << pressureThreshold;
 
-        emit q->threshold();
+        emit q->thresholdReached({});
     }
 
     XIBarrierReleasePointer (QX11Info::display(), event->deviceid, barrier, event->eventid);
@@ -320,7 +319,21 @@ bool Latte::EdgePressure::enabled() const
     return false;
 }
 
-void Latte::EdgePressure::updateBarrier()
+Latte::Dock::PressureThreshold Latte::EdgePressure::threshold() const
+{
+    return static_cast<Dock::PressureThreshold>(d->pressureThreshold);
+}
+
+void Latte::EdgePressure::setThreshold(Latte::Dock::PressureThreshold value)
+{
+    if (static_cast<uint>(value) == d->pressureThreshold)
+        return;
+
+    d->pressureThreshold = value;
+    emit thresholdChanged();
+}
+
+void Latte::EdgePressure::update()
 {
     if (KWindowSystem::isPlatformWayland()) {
         //! NOT IMPLEMENTED
@@ -331,7 +344,7 @@ void Latte::EdgePressure::updateBarrier()
     }
 }
 
-void Latte::EdgePressure::deleteBarrier()
+void Latte::EdgePressure::disable()
 {
     if (KWindowSystem::isPlatformWayland()) {
         //! NOT IMPLEMENTED

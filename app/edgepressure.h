@@ -21,6 +21,8 @@
 #ifndef EDGEPRESSURE_H
 #define EDGEPRESSURE_H
 
+#include "../liblattedock/dock.h"
+
 #include <QObject>
 
 namespace Latte {
@@ -32,17 +34,23 @@ class EdgePressure : public QObject
     Q_OBJECT
     Q_DISABLE_COPY(EdgePressure)
 
+    Q_PROPERTY(Latte::Dock::PressureThreshold threshold READ threshold WRITE setThreshold NOTIFY thresholdChanged)
+
 public:
     EdgePressure(DockView* view, QObject* parent = nullptr);
     virtual ~EdgePressure();
 
-    void updateBarrier();
-    void deleteBarrier();
+    void update();
+    void disable();
 
     bool enabled() const;
 
+    Latte::Dock::PressureThreshold threshold() const;
+    void setThreshold(Latte::Dock::PressureThreshold value);
+
 signals:
-    void threshold();
+    void thresholdReached(QPrivateSignal);
+    void thresholdChanged();
 
 private:
     class Private;

@@ -55,7 +55,7 @@ VisibilityManagerPrivate::VisibilityManagerPrivate(Latte::DockView *view, Visibi
             emit this->q->mustBeHide(VisibilityManager::QPrivateSignal{});
         }
     });
-    connect(&edgePressure, &EdgePressure::threshold, this, [this]() {
+    connect(&edgePressure, &EdgePressure::thresholdReached, this, [this]() {
         if (isHidden) {
             //   qDebug() << "must be shown";
             emit this->q->mustBeShown(VisibilityManager::QPrivateSignal{});
@@ -262,16 +262,15 @@ void VisibilityManagerPrivate::setEnablePressure(bool enable)
     pressureActive = enable;
 
     if (mode == Dock::AlwaysVisible || mode == Dock::WindowsGoBelow) {
-        edgePressure.deleteBarrier();
+        edgePressure.disable();
 
     } else {
         if (!pressureActive)
-            edgePressure.deleteBarrier();
+            edgePressure.disable();
         else
-            edgePressure.updateBarrier();
-
-        emit q->edgePressureChanged();
+            edgePressure.update();
     }
+    emit q->edgePressureChanged();
 }
 
 inline void VisibilityManagerPrivate::raiseDock(bool raise)
@@ -357,7 +356,7 @@ inline void VisibilityManagerPrivate::setDockGeometry(const QRect &geometry)
     }
 
     if (pressureActive && mode != Dock::AlwaysVisible && mode != Dock::WindowsGoBelow) {
-        edgePressure.updateBarrier();
+        edgePressure.update();
     }
 }
 
@@ -618,6 +617,16 @@ void VisibilityManager::setRaiseOnActivity(bool enable)
     d->setRaiseOnActivity(enable);
 }
 
+bool VisibilityManager::edgePressure() const
+{
+    return d->pressureActive;
+}
+
+void VisibilityManager::setEdgePressure(bool enable)
+{
+    return d->setEnablePressure(enable);
+}
+
 bool VisibilityManager::isHidden() const
 {
     return d->isHidden;
@@ -643,16 +652,6 @@ bool VisibilityManager::containsMouse() const
     return d->containsMouse;
 }
 
-bool VisibilityManager::edgePressure() const
-{
-    return d->pressureActive;
-}
-
-void VisibilityManager::setEdgePressure(bool enable)
-{
-    return d->setEnablePressure(enable);
-}
-
 int VisibilityManager::timerShow() const
 {
     return d->timerShow.interval();
@@ -671,6 +670,11 @@ int VisibilityManager::timerHide() const
 void VisibilityManager::setTimerHide(int msec)
 {
     d->setTimerHide(msec);
+}
+
+EdgePressure *VisibilityManager::pressure() const
+{
+    return &d->edgePressure;
 }
 
 //! END: VisibilityManager implementation
