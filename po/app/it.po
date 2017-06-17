@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/psifidotos/latte-dock/\n"
 "POT-Creation-Date: 2017-06-07 14:40+0300\n"
-"PO-Revision-Date: 2017-06-14 22:17+0100\n"
+"PO-Revision-Date: 2017-06-17 11:28+0100\n"
 "Last-Translator: Ivan Bordoni <ivan.mail@fastwebnet.it>\n"
 "Language-Team: Italian <kde-i18n-it@kde.org>\n"
 "Language: it\n"
@@ -308,9 +308,8 @@ msgid "Show"
 msgstr "Mostra"
 
 #: ../../shell/package/contents/configuration/AppearanceConfig.qml:411
-#, fuzzy
 msgid "Size: "
-msgstr "Size"
+msgstr "Dimensione:"
 
 #: ../../shell/package/contents/configuration/AppearanceConfig.qml:454
 msgid "Transparency: "
@@ -347,7 +346,7 @@ msgstr "Massimo:"
 
 #: ../../shell/package/contents/configuration/AppearanceConfig.qml:681
 msgid "Offset: "
-msgstr "Offset"
+msgstr "Offset:"
 
 #: ../../shell/package/contents/configuration/AppearanceConfig.qml:689
 msgid "Offset"
@@ -359,7 +358,7 @@ msgstr "Posizione"
 
 #: ../../shell/package/contents/configuration/BehaviorConfig.qml:71
 msgid "On Primary"
-msgstr "Uscita Primaria"
+msgstr "Su Primario"
 
 #: ../../shell/package/contents/configuration/BehaviorConfig.qml:106
 msgid "Screen:"
@@ -503,7 +502,6 @@ msgid "Remove"
 msgstr "Rimuovi"
 
 #: ../../shell/package/contents/configuration/LatteDockConfiguration.qml:343
-#, fuzzy
 msgid "Remove current dock"
 msgstr "Sostituisce l'istanza dock corrente."
 
@@ -701,7 +699,7 @@ msgid ""
 "exceed the maximum length"
 msgstr ""
 "Le dimensioni delle icone vengono ridotte automaticamente quando \n"
-"il contenuto supera la lunghezza massima"
+"il contenuto della dock supera la lunghezza massima"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:136
 msgid "Add launchers only in the corresponding area"
@@ -742,18 +740,16 @@ msgid "Active Applet Indicator"
 msgstr "Indicatore Applet attiva"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:227
-#, fuzzy
 msgctxt "active indicator to no applets"
 msgid "None"
-msgstr "Nessuna"
+msgstr "Nessuno"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:237
 msgctxt "active indicator only to in-house latte applets"
 msgid "Internals"
-msgstr ""
+msgstr "Interno"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:247
-#, fuzzy
 msgctxt "active indicator to all applets"
 msgid "All"
 msgstr "Tutto"
@@ -770,7 +766,7 @@ msgid ""
 msgstr ""
 "A volte, il layout in uso di Latte non è sufficiente, ( ad esempio quando si"
 " viaggia ) \n"
-"per ovviare a questo Latte ti mette a disposizione una completa sessione di"
+"per ovviare a questo Latte ti mette a disposizione una completa sessione di \n"
 " lavoro alternativa"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:302
@@ -787,7 +783,7 @@ msgstr "Aggiunge uno spaziatore per separare le applets"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:324
 msgid "Remove Tasks"
-msgstr "Rimuovi Tasks"
+msgstr "Rimuovi TaskManager"
 
 #: ../../shell/package/contents/configuration/TweaksConfig.qml:326
 msgid "Remove Latte plasmoid"
