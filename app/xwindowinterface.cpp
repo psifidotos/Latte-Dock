@@ -42,9 +42,9 @@ XWindowInterface::XWindowInterface(QObject *parent)
             (&KWindowSystem::windowChanged)
             , this, &XWindowInterface::windowChangedProxy);
 
-    auto addWindow = [&](WId wid) {
+    auto addWindow = [&](WindowId wid) {
         if (std::find(m_windows.cbegin(), m_windows.cend(), wid) == m_windows.cend()) {
-            if (isValidWindow(KWindowInfo(wid, NET::WMWindowType))) {
+            if (isValidWindow(KWindowInfo(wid.value<WId>(), NET::WMWindowType))) {
                 m_windows.push_back(wid);
                 emit windowAdded(wid);
             }
@@ -52,7 +52,7 @@ XWindowInterface::XWindowInterface(QObject *parent)
     };
 
     connect(KWindowSystem::self(), &KWindowSystem::windowAdded, this, addWindow);
-    connect(KWindowSystem::self(), &KWindowSystem::windowRemoved, [this](WId wid) {
+    connect(KWindowSystem::self(), &KWindowSystem::windowRemoved, [this](WindowId wid) noexcept {
         if (std::find(m_windows.cbegin(), m_windows.cend(), wid) != m_windows.end()) {
             m_windows.remove(wid);
             emit windowRemoved(wid);
@@ -73,7 +73,7 @@ XWindowInterface::~XWindowInterface()
 {
 }
 
-void XWindowInterface::setDockExtraFlags(QQuickWindow &view)
+void XWindowInterface::setDockExtraFlags(QWindow &view)
 {
     NETWinInfo winfo(QX11Info::connection()
                      , static_cast<xcb_window_t>(view.winId())
@@ -87,42 +87,44 @@ void XWindowInterface::setDockExtraFlags(QQuickWindow &view)
     KWindowSystem::setOnActivities(view.winId(), {"0"});
 }
 
-void XWindowInterface::setDockStruts(WId dockId, const QRect &dockRect
-                                     , const QScreen &screen, Plasma::Types::Location location) const
+void XWindowInterface::setDockStruts(QWindow &view, const QRect &rect
+                                     , Plasma::Types::Location location)
 {
     NETExtendedStrut strut;
 
-    const QRect currentScreen {screen.geometry()};
-    const QRect wholeScreen {{0, 0}, screen.virtualSize()};
+    const auto screen = view.screen();
+
+    const QRect currentScreen {screen->geometry()};
+    const QRect wholeScreen {{0, 0}, screen->virtualSize()};
 
     switch (location) {
         case Plasma::Types::TopEdge: {
-            const int topOffset {screen.geometry().top()};
-            strut.top_width = dockRect.height() + topOffset;
-            strut.top_start = dockRect.x();
-            strut.top_end = dockRect.x() + dockRect.width() - 1;
+            const int topOffset {screen->geometry().top()};
+            strut.top_width = rect.height() + topOffset;
+            strut.top_start = rect.x();
+            strut.top_end = rect.x() + rect.width() - 1;
             break;
         }
 
         case Plasma::Types::BottomEdge: {
             const int bottomOffset {wholeScreen.bottom() - currentScreen.bottom()};
-            strut.bottom_width = dockRect.height() + bottomOffset;
-            strut.bottom_start = dockRect.x();
-            strut.bottom_end = dockRect.x() + dockRect.width() - 1;
+            strut.bottom_width = rect.height() + bottomOffset;
+            strut.bottom_start = rect.x();
+            strut.bottom_end = rect.x() + rect.width() - 1;
             break;
         }
         case Plasma::Types::LeftEdge: {
-            const int leftOffset = {screen.geometry().left()};
-            strut.left_width = dockRect.width() + leftOffset;
-            strut.left_start = dockRect.y();
-            strut.left_end = dockRect.y() + dockRect.height() - 1;
+            const int leftOffset = {screen->geometry().left()};
+            strut.left_width = rect.width() + leftOffset;
+            strut.left_start = rect.y();
+            strut.left_end = rect.y() + rect.height() - 1;
             break;
         }
         case Plasma::Types::RightEdge: {
             const int rightOffset = {wholeScreen.right() - currentScreen.right()};
-            strut.right_width = dockRect.width() + rightOffset;
-            strut.right_start = dockRect.y();
-            strut.right_end = dockRect.y() + dockRect.height() - 1;
+            strut.right_width = rect.width() + rightOffset;
+            strut.right_start = rect.y();
+            strut.right_end = rect.y() + rect.height() - 1;
             break;
         }
         default:
@@ -130,7 +132,7 @@ void XWindowInterface::setDockStruts(WId dockId, const QRect &dockRect
             return;
     }
 
-    KWindowSystem::setExtendedStrut(dockId,
+    KWindowSystem::setExtendedStrut(view.winId(),
                                     strut.left_width,   strut.left_start,   strut.left_end,
                                     strut.right_width,  strut.right_start,  strut.right_end,
                                     strut.top_width,    strut.top_start,    strut.top_end,
@@ -138,17 +140,17 @@ void XWindowInterface::setDockStruts(WId dockId, const QRect &dockRect
                                    );
 }
 
-void XWindowInterface::removeDockStruts(WId dockId) const
+void XWindowInterface::removeDockStruts(QWindow &view) const
 {
-    KWindowSystem::setStrut(dockId, 0, 0, 0, 0);
+    KWindowSystem::setStrut(view.winId(), 0, 0, 0, 0);
 }
 
-WId XWindowInterface::activeWindow() const
+WindowId XWindowInterface::activeWindow() const
 {
     return KWindowSystem::self()->activeWindow();
 }
 
-const std::list<WId> &XWindowInterface::windows() const
+const std::list<WindowId> &XWindowInterface::windows() const
 {
     return m_windows;
 }
@@ -158,7 +160,7 @@ void XWindowInterface::skipTaskBar(const QDialog &dialog) const
     KWindowSystem::setState(dialog.winId(), NET::SkipTaskbar);
 }
 
-void XWindowInterface::slideWindow(QQuickWindow &view, AbstractWindowInterface::Slide location) const
+void XWindowInterface::slideWindow(QWindow &view, AbstractWindowInterface::Slide location) const
 {
     auto slideLocation = KWindowEffects::NoEdge;
 
@@ -186,7 +188,7 @@ void XWindowInterface::slideWindow(QQuickWindow &view, AbstractWindowInterface::
     KWindowEffects::slideWindow(view.winId(), slideLocation, -1);
 }
 
-void XWindowInterface::enableBlurBehind(QQuickWindow &view) const
+void XWindowInterface::enableBlurBehind(QWindow &view) const
 {
     KWindowEffects::enableBlurBehind(view.winId());
 }
@@ -196,15 +198,23 @@ WindowInfoWrap XWindowInterface::requestInfoActive() const
     return requestInfo(KWindowSystem::activeWindow());
 }
 
-bool XWindowInterface::isOnCurrentDesktop(WId wid) const
+bool XWindowInterface::isOnCurrentDesktop(WindowId wid) const
 {
-    KWindowInfo winfo(wid, NET::WMDesktop);
+    KWindowInfo winfo(wid.value<WId>(), NET::WMDesktop);
     return winfo.valid() && winfo.isOnCurrentDesktop();
 }
 
-WindowInfoWrap XWindowInterface::requestInfo(WId wid) const
+bool XWindowInterface::isOnCurrentActivity(WindowId wid) const
 {
-    const KWindowInfo winfo{wid, NET::WMFrameExtents
+    KWindowInfo winfo(wid.value<WId>(), 0, NET::WM2Activities);
+
+    return winfo.valid()
+            && (winfo.activities().contains(m_activities->currentActivity()) || winfo.activities().empty());
+}
+
+WindowInfoWrap XWindowInterface::requestInfo(WindowId wid) const
+{
+    const KWindowInfo winfo{wid.value<WId>(), NET::WMFrameExtents
         | NET::WMWindowType
         | NET::WMGeometry
         | NET::WMState};
@@ -214,7 +224,7 @@ WindowInfoWrap XWindowInterface::requestInfo(WId wid) const
     if (isValidWindow(winfo)) {
         winfoWrap.setIsValid(true);
         winfoWrap.setWid(wid);
-        winfoWrap.setIsActive(KWindowSystem::activeWindow() == wid);
+        winfoWrap.setIsActive(KWindowSystem::activeWindow() == wid.value<WId>());
         winfoWrap.setIsMinimized(winfo.hasState(NET::Hidden));
         winfoWrap.setIsMaxVert(winfo.hasState(NET::MaxVert));
         winfoWrap.setIsMaxHoriz(winfo.hasState(NET::MaxHoriz));

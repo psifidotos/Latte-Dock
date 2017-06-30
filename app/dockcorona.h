@@ -23,6 +23,7 @@
 
 #include "dockview.h"
 #include "globalsettings.h"
+#include "globalshortcuts.h"
 #include "../liblattedock/dock.h"
 
 #include <QObject>
@@ -30,17 +31,24 @@
 #include <KAboutApplicationDialog>
 #include <KDeclarative/QmlObject>
 
+class ScreenPool;
+class GlobalSettings;
+class GlobalShortcuts;
+
+namespace KActivities {
+class Consumer;
+}
+
 namespace Plasma {
 class Corona;
 class Containment;
 class Types;
 }
 
-class ScreenPool;
-class GlobalSettings;
-
-namespace KActivities {
-class Consumer;
+namespace KWayland {
+namespace Client {
+class PlasmaShell;
+}
 }
 
 namespace Latte {
@@ -61,13 +69,16 @@ public:
     QList<Plasma::Types::Location> freeEdges(int screen) const;
     QList<Plasma::Types::Location> freeEdges(QScreen *screen) const;
 
-    int docksCount(int screen) const;
     int docksCount() const;
+    int docksCount(int screen) const;
+    int docksCount(QScreen *screen) const;
+
     int noDocksWithTasks() const;
     int screenForContainment(const Plasma::Containment *containment) const override;
 
-    void addDock(Plasma::Containment *containment);
+    void addDock(Plasma::Containment *containment, int expDockScreen = -1);
     void recreateDock(Plasma::Containment *containment);
+    void copyDock(Plasma::Containment *containment);
 
     Dock::SessionType currentSession();
     void setCurrentSession(Dock::SessionType session);
@@ -79,10 +90,13 @@ public:
     ScreenPool *screenPool() const;
     GlobalSettings *globalSettings() const;
 
+    KWayland::Client::PlasmaShell *waylandDockCoronaInterface() const;
+
 public slots:
     void activateLauncherMenu();
     void loadDefaultLayout() override;
     void dockContainmentDestroyed(QObject *cont);
+    void updateDockItemBadge(QString identifier, QString value);
 
 signals:
     void configurationShown(PlasmaQuick::ConfigView *configView);
@@ -106,6 +120,7 @@ private slots:
 private:
     void cleanConfig();
     void qmlRegisterTypes() const;
+    void setupWaylandIntegration();
     bool appletExists(uint containmentId, uint appletId) const;
     bool containmentContainsTasks(Plasma::Containment *cont);
     bool containmentExists(uint id) const;
@@ -134,8 +149,13 @@ private:
     KActivities::Consumer *m_activityConsumer;
     QPointer<KAboutApplicationDialog> aboutDialog;
 
-    ScreenPool *m_screenPool;
-    GlobalSettings *m_globalSettings;
+    ScreenPool *m_screenPool{nullptr};
+    GlobalSettings *m_globalSettings{nullptr};
+    GlobalShortcuts *m_globalShortcuts{nullptr};
+
+    KWayland::Client::PlasmaShell *m_waylandDockCorona{nullptr};
+
+    friend class GlobalShortcuts;
 };
 
 }

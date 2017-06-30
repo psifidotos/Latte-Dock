@@ -33,6 +33,7 @@
 #include <QQuickItem>
 #include <QMenu>
 #include <QMetaEnum>
+#include <QVersionNumber>
 
 #include <KActionCollection>
 #include <KAuthorized>
@@ -45,6 +46,9 @@
 #include <Plasma/ContainmentActions>
 #include <PlasmaQuick/AppletQuickItem>
 
+#include <KWayland/Client/plasmashell.h>
+#include <KWayland/Client/surface.h>
+
 namespace Latte {
 
 //! both alwaysVisible and dockWinBehavior are passed through corona because
@@ -54,7 +58,6 @@ DockView::DockView(Plasma::Corona *corona, QScreen *targetScreen, bool dockWindo
     : PlasmaQuick::ContainmentView(corona),
       m_contextMenu(nullptr)
 {
-    setVisible(false);
     setTitle(corona->kPackage().metadata().name());
     setIcon(qGuiApp->windowIcon());
     setResizeMode(QuickViewSharedEngine::SizeRootObjectToView);
@@ -82,8 +85,12 @@ DockView::DockView(Plasma::Corona *corona, QScreen *targetScreen, bool dockWindo
 
     connect(this, &DockView::containmentChanged
     , this, [&]() {
+        qDebug() << "dock view c++ containment changed 1...";
+
         if (!this->containment())
             return;
+
+        qDebug() << "dock view c++ containment changed 2...";
 
         restoreConfig();
         reconsiderScreen();
@@ -109,6 +116,7 @@ DockView::DockView(Plasma::Corona *corona, QScreen *targetScreen, bool dockWindo
 
     if (dockCorona) {
         connect(dockCorona, &DockCorona::docksCountChanged, this, &DockView::docksCountChanged);
+        connect(this, &DockView::docksCountChanged, this, &DockView::totalDocksCountChanged);
         connect(dockCorona, &DockCorona::dockLocationChanged, this, &DockView::dockLocationChanged);
         connect(dockCorona, &DockCorona::dockLocationChanged, this, [&]() {
             //! check if an edge has been freed for a primary dock
@@ -126,6 +134,10 @@ DockView::DockView(Plasma::Corona *corona, QScreen *targetScreen, bool dockWindo
 
 DockView::~DockView()
 {
+    m_inDelete = true;
+    disconnect(corona(), &Plasma::Corona::availableScreenRectChanged, this, &DockView::availableScreenRectChanged);
+    disconnect(containment(), SIGNAL(statusChanged(Plasma::Types::ItemStatus)), this, SLOT(statusChanged(Plasma::Types::ItemStatus)));
+
     m_screenSyncTimer.stop();
 
     qDebug() << "dock view deleting...";
@@ -139,15 +151,22 @@ DockView::~DockView()
     //! this->disconnect();
 
     if (m_configView)
-        m_configView->hide();
+        m_configView->setVisible(false);//hide();
 
     if (m_visibility)
         delete m_visibility;
+
+    if (m_shellSurface) {
+        m_shellSurface->release();
+        delete m_shellSurface;
+        m_shellSurface = nullptr;
+    }
 }
 
 void DockView::init()
 {
     connect(this, &QQuickWindow::screenChanged, this, &DockView::screenChanged);
+    connect(this, &QQuickWindow::screenChanged, this, &DockView::docksCountChanged);
     connect(qGuiApp, &QGuiApplication::screenAdded, this, &DockView::screenChanged);
     connect(qGuiApp, &QGuiApplication::primaryScreenChanged, this, &DockView::screenChanged);
     connect(this, &DockView::screenGeometryChanged, this, &DockView::syncGeometry);
@@ -159,10 +178,10 @@ void DockView::init()
     connect(this, &QQuickWindow::widthChanged, this, &DockView::updateAbsDockGeometry);
     connect(this, &QQuickWindow::heightChanged, this, &DockView::heightChanged);
     connect(this, &QQuickWindow::heightChanged, this, &DockView::updateAbsDockGeometry);
-    connect(corona(), &Plasma::Corona::availableScreenRectChanged, this, [&]() {
-        if (formFactor() == Plasma::Types::Vertical)
-            syncGeometry();
-    });
+
+    connect(corona(), &Plasma::Corona::availableScreenRectChanged, this, &DockView::availableScreenRectChanged);
+
+    connect(this, &DockView::behaveAsPlasmaPanelChanged, this, &DockView::syncGeometry);
     connect(this, &DockView::drawShadowsChanged, this, &DockView::syncGeometry);
     connect(this, &DockView::maxLengthChanged, this, &DockView::syncGeometry);
     connect(this, &DockView::offsetChanged, this, &DockView::syncGeometry);
@@ -175,10 +194,18 @@ void DockView::init()
         updateFormFactor();
         syncGeometry();
     });
+    connect(this, &DockView::dockTransparencyChanged, this, &DockView::updateEffects);
     connect(this, &DockView::drawEffectsChanged, this, &DockView::updateEffects);
     connect(this, &DockView::effectsAreaChanged, this, &DockView::updateEffects);
 
     connect(&m_theme, &Plasma::Theme::themeChanged, this, &DockView::updateEffects);
+
+    connect(this, &DockView::normalThicknessChanged, this, [&]() {
+        if (m_behaveAsPlasmaPanel) {
+            syncGeometry();
+        }
+    });
+
     connect(this, SIGNAL(normalThicknessChanged()), corona(), SIGNAL(availableScreenRectChanged()));
     connect(this, SIGNAL(shadowChanged()), corona(), SIGNAL(availableScreenRectChanged()));
     rootContext()->setContextProperty(QStringLiteral("dock"), this);
@@ -190,9 +217,50 @@ void DockView::init()
     }
 
     setSource(corona()->kPackage().filePath("lattedockui"));
-    setVisible(true);
+    // setVisible(true);
     syncGeometry();
+
+    if (!KWindowSystem::isPlatformWayland()) {
+        setVisible(true);
+    }
+
     qDebug() << "SOURCE:" << source();
+}
+
+void DockView::availableScreenRectChanged()
+{
+    if (m_inDelete)
+        return;
+
+    if (formFactor() == Plasma::Types::Vertical)
+        syncGeometry();
+}
+
+void DockView::setupWaylandIntegration()
+{
+    using namespace KWayland::Client;
+
+    if (m_shellSurface)
+        return;
+
+    if (DockCorona *c = qobject_cast<DockCorona *>(corona())) {
+        PlasmaShell *interface{c->waylandDockCoronaInterface()};
+
+        if (!interface)
+            return;
+
+        Surface *s{Surface::fromWindow(this)};
+
+        if (!s)
+            return;
+
+        m_shellSurface = interface->createSurface(s, this);
+        qDebug() << "wayland dock window surface was created...";
+
+        m_shellSurface->setSkipTaskbar(true);
+        m_shellSurface->setRole(PlasmaShellSurface::Role::Panel);
+        m_shellSurface->setPanelBehavior(PlasmaShellSurface::PanelBehavior::WindowsGoBelow);
+    }
 }
 
 bool DockView::setCurrentScreen(const QString id)
@@ -256,6 +324,7 @@ void DockView::setScreenToFollow(QScreen *screen, bool updateScreenId)
         this->containment()->reactToScreenChange();
 
     syncGeometry();
+    updateAbsDockGeometry(true);
     emit screenGeometryChanged();
 }
 
@@ -274,8 +343,10 @@ void DockView::reconsiderScreen()
 
     //!check if the associated screen is running
     foreach (auto scr, qGuiApp->screens()) {
-        if (m_screenToFollowId == scr->name())
+        if (m_screenToFollowId == scr->name()
+                || (onPrimary() && scr == qGuiApp->primaryScreen()) ) {
             screenExists = true;
+        }
     }
 
     qDebug() << "dock screen exists  ::: " << screenExists;
@@ -283,32 +354,40 @@ void DockView::reconsiderScreen()
     //! 1.a primary dock must be always on the primary screen
     //! 2.the last tasks dock must also always on the primary screen
     //! even though it has been configured as an explicit
-    if ((m_onPrimary || (tasksPresent() && dockCorona->noDocksWithTasks() == 1) && !screenExists)
-        && m_screenToFollowId != qGuiApp->primaryScreen()->name()
-        && m_screenToFollow != qGuiApp->primaryScreen()) {
+    if ((m_onPrimary || (tasksPresent() && dockCorona->noDocksWithTasks() == 1 && !screenExists))
+        && (m_screenToFollowId != qGuiApp->primaryScreen()->name()
+        || m_screenToFollow != qGuiApp->primaryScreen())) {
         //change to primary screen only if the specific edge is free
+        qDebug() << "updating the primary screen for dock...";
+        qDebug() << "available primary screen edges:" << dockCorona->freeEdges(qGuiApp->primaryScreen());
+        qDebug() << "dock location:" << location();
+
         if (dockCorona->freeEdges(qGuiApp->primaryScreen()).contains(location())) {
             connect(qGuiApp->primaryScreen(), &QScreen::geometryChanged, this, &DockView::screenGeometryChanged);
 
             //! case 2
             if (!m_onPrimary && !screenExists && tasksPresent() && (dockCorona->noDocksWithTasks() == 1)) {
+                qDebug() << "reached case 2 of updating dock primary screen...";
                 setScreenToFollow(qGuiApp->primaryScreen(), false);
             } else {
                 //! case 1
+                qDebug() << "reached case 1 of updating dock primary screen...";
                 setScreenToFollow(qGuiApp->primaryScreen());
             }
 
             syncGeometry();
         }
-    } else {
+    } else if (!m_onPrimary){
         //! 3.an explicit dock must be always on the correct associated screen
         //! there are cases that window manager misplaces the dock, this function
         //! ensures that this dock will return at its correct screen
         foreach (auto scr, qGuiApp->screens()) {
             if (scr && scr->name() == m_screenToFollowId) {
+                qDebug() << "updating the explicit screen for dock...";
                 connect(scr, &QScreen::geometryChanged, this, &DockView::screenGeometryChanged);
                 setScreenToFollow(scr);
                 syncGeometry();
+                break;
             }
         }
     }
@@ -319,6 +398,13 @@ void DockView::reconsiderScreen()
 void DockView::screenChanged(QScreen *scr)
 {
     m_screenSyncTimer.start();
+
+    //! this is needed in order to update the struts on screen change
+    //! and even though the geometry has been set correctly the offsets
+    //! of the screen must be updated to the new ones
+    if (m_visibility && m_visibility->mode() == Latte::Dock::AlwaysVisible) {
+        updateAbsDockGeometry(true);
+    }
 }
 
 void DockView::addNewDock()
@@ -330,9 +416,18 @@ void DockView::addNewDock()
     }
 }
 
+void DockView::copyDock()
+{
+    auto *dockCorona = qobject_cast<DockCorona *>(this->corona());
+
+    if (dockCorona) {
+        dockCorona->copyDock(containment());
+    }
+}
+
 void DockView::removeDock()
 {
-    if (docksCount() > 1) {
+    if (totalDocksCount() > 1) {
         QAction *removeAct = this->containment()->actions()->action(QStringLiteral("remove"));
 
         if (removeAct) {
@@ -372,19 +467,23 @@ void DockView::showConfigurationInterface(Plasma::Applet *applet)
 
     if (m_configView && c && c->isContainment() && c == this->containment()) {
         if (m_configView->isVisible()) {
-            m_configView->hide();
+            m_configView->setVisible(false);
+            //m_configView->hide();
         } else {
-            m_configView->show();
+            m_configView->setVisible(true);
+            //m_configView->show();
         }
 
         return;
     } else if (m_configView) {
         if (m_configView->applet() == applet) {
-            m_configView->show();
+            m_configView->setVisible(true);
+            //m_configView->show();
             m_configView->requestActivate();
             return;
         } else {
-            m_configView->hide();
+            m_configView->setVisible(false);
+            //m_configView->hide();
             m_configView->deleteLater();
         }
     }
@@ -401,12 +500,19 @@ void DockView::showConfigurationInterface(Plasma::Applet *applet)
     m_configView.data()->init();
 
     if (!delayConfigView) {
-        m_configView.data()->show();
+        m_configView->setVisible(true);
+        //m_configView.data()->show();
     } else {
         //add a timer for showing the configuration window the first time it is
         //created in order to give the containmnent's layouts the time to
         //calculate the window's height
-        QTimer::singleShot(150, m_configView, SLOT(show()));
+        if (!KWindowSystem::isPlatformWayland()) {
+            QTimer::singleShot(150, m_configView, SLOT(show()));
+        } else {
+            QTimer::singleShot(150, [this]() {
+                m_configView->setVisible(true);
+            });
+        }
     }
 }
 
@@ -484,7 +590,7 @@ void DockView::resizeWindow(QRect availableScreenRect)
         //qDebug() << "MAXIMUM RECT :: " << maximumRect << " - AVAILABLE RECT :: " << availableRect;
         QSize size{maxThickness(), availableScreenRect.height()};
 
-        if (m_drawShadows) {
+        if (m_behaveAsPlasmaPanel) {
             size.setWidth(normalThickness());
             size.setHeight(static_cast<int>(maxLength() * availableScreenRect.height()));
         }
@@ -496,7 +602,7 @@ void DockView::resizeWindow(QRect availableScreenRect)
         QSize screenSize = this->screen()->size();
         QSize size{screenSize.width(), maxThickness()};
 
-        if (m_drawShadows) {
+        if (m_behaveAsPlasmaPanel) {
             size.setWidth(static_cast<int>(maxLength() * screenSize.width()));
             size.setHeight(normalThickness());
         }
@@ -526,12 +632,19 @@ void DockView::setLocalGeometry(const QRect &geometry)
     updateAbsDockGeometry();
 }
 
-void DockView::updateAbsDockGeometry()
+void DockView::updateAbsDockGeometry(bool bypassChecks)
 {
+    //! there was a -1 in height and width here. The reason of this
+    //! if I remember correctly was related to multi-screen but I cant
+    //! remember exactly the reason, something related to rigth edge in
+    //! multi screen environment. BUT this was breaking the entire AlwaysVisible
+    //! experience with struts. Removing them in order to restore correct
+    //! behavior and keeping this comment in order to check for
+    //! multi-screen breakage
     QRect absGeometry {x() + m_localGeometry.x(), y() + m_localGeometry.y()
-                       , m_localGeometry.width() - 1, m_localGeometry.height() - 1};
+                       , m_localGeometry.width(), m_localGeometry.height()};
 
-    if (m_absGeometry == absGeometry)
+    if (m_absGeometry == absGeometry && !bypassChecks)
         return;
 
     m_absGeometry = absGeometry;
@@ -555,7 +668,7 @@ void DockView::updatePosition(QRect availableScreenRect)
         case Plasma::Types::TopEdge:
             screenGeometry = this->screen()->geometry();
 
-            if (m_drawShadows) {
+            if (m_behaveAsPlasmaPanel) {
                 position = {screenGeometry.x() + length(screenGeometry.width()), screenGeometry.y()};
             } else {
                 position = {screenGeometry.x(), screenGeometry.y()};
@@ -566,7 +679,7 @@ void DockView::updatePosition(QRect availableScreenRect)
         case Plasma::Types::BottomEdge:
             screenGeometry = this->screen()->geometry();
 
-            if (m_drawShadows) {
+            if (m_behaveAsPlasmaPanel) {
                 position = {screenGeometry.x() + length(screenGeometry.width()),
                             screenGeometry.y() + screenGeometry.height() - cleanThickness
                            };
@@ -577,7 +690,7 @@ void DockView::updatePosition(QRect availableScreenRect)
             break;
 
         case Plasma::Types::RightEdge:
-            if (m_drawShadows && !mask().isNull()) {
+            if (m_behaveAsPlasmaPanel && !mask().isNull()) {
                 position = {availableScreenRect.right() - cleanThickness + 1,
                             availableScreenRect.y() + length(availableScreenRect.height())
                            };
@@ -588,7 +701,7 @@ void DockView::updatePosition(QRect availableScreenRect)
             break;
 
         case Plasma::Types::LeftEdge:
-            if (m_drawShadows && !mask().isNull()) {
+            if (m_behaveAsPlasmaPanel && !mask().isNull()) {
                 position = {availableScreenRect.x(), availableScreenRect.y() + length(availableScreenRect.height())};
             } else {
                 position = {availableScreenRect.x(), availableScreenRect.y()};
@@ -602,6 +715,10 @@ void DockView::updatePosition(QRect availableScreenRect)
     }
 
     setPosition(position);
+
+    if (m_shellSurface) {
+        m_shellSurface->setPosition(position);
+    }
 }
 
 inline void DockView::syncGeometry()
@@ -651,7 +768,7 @@ inline void DockView::syncGeometry()
                 }
             }
 
-            if (availableRegion.rectCount() > 1 && m_drawShadows)
+            if (availableRegion.rectCount() > 1 && m_behaveAsPlasmaPanel)
                 m_forceDrawCenteredBorders = true;
             else
                 m_forceDrawCenteredBorders = false;
@@ -707,7 +824,17 @@ int DockView::docksCount() const
 {
     auto dockCorona = qobject_cast<DockCorona *>(corona());
 
-    if (!dockCorona || !this->containment())
+    if (!dockCorona)
+        return 0;
+
+    return dockCorona->docksCount(screen());
+}
+
+int DockView::totalDocksCount() const
+{
+    auto dockCorona = qobject_cast<DockCorona *>(corona());
+
+    if (!dockCorona)
         return 0;
 
     return dockCorona->docksCount();
@@ -759,6 +886,31 @@ void DockView::setDockWinBehavior(bool dock)
     emit dockWinBehaviorChanged();
 }
 
+bool DockView::behaveAsPlasmaPanel() const
+{
+    return m_behaveAsPlasmaPanel;
+}
+
+void DockView::setBehaveAsPlasmaPanel(bool behavior)
+{
+    if (m_behaveAsPlasmaPanel == behavior) {
+        return;
+    }
+
+    m_behaveAsPlasmaPanel = behavior;
+
+    if (m_behaveAsPlasmaPanel && m_drawShadows) {
+        PanelShadows::self()->addWindow(this, enabledBorders());
+    } else {
+        PanelShadows::self()->removeWindow(this);
+        // m_enabledBorders = Plasma::FrameSvg::AllBorders;
+        // emit enabledBordersChanged();
+    }
+
+    updateEffects();
+    emit behaveAsPlasmaPanelChanged();
+}
+
 bool DockView::drawShadows() const
 {
     return m_drawShadows;
@@ -772,15 +924,14 @@ void DockView::setDrawShadows(bool draw)
 
     m_drawShadows = draw;
 
-    if (m_drawShadows) {
+    if (m_behaveAsPlasmaPanel && m_drawShadows) {
         PanelShadows::self()->addWindow(this, enabledBorders());
     } else {
         PanelShadows::self()->removeWindow(this);
-        m_enabledBorders = Plasma::FrameSvg::AllBorders;
-        emit enabledBordersChanged();
+        //m_enabledBorders = Plasma::FrameSvg::AllBorders;
+        //emit enabledBordersChanged();
     }
 
-    updateEffects();
     emit drawShadowsChanged();
 }
 
@@ -890,7 +1041,11 @@ void DockView::setMaskArea(QRect area)
     m_maskArea = area;
 
     if (KWindowSystem::compositingActive()) {
-        setMask(m_maskArea);
+        if (m_behaveAsPlasmaPanel) {
+            setMask(QRect());
+        } else {
+            setMask(m_maskArea);
+        }
     } else {
         //! this is used when compositing is disabled and provides
         //! the correct way for the mask to be painted in order for
@@ -966,6 +1121,21 @@ void DockView::setOffset(int offset)
     emit offsetChanged();
 }
 
+int DockView::dockTransparency() const
+{
+    return m_dockTransparency;
+}
+
+void DockView::setDockTransparency(int transparency)
+{
+    if (m_dockTransparency == transparency) {
+        return;
+    }
+
+    m_dockTransparency = transparency;
+    emit dockTransparencyChanged();
+}
+
 int DockView::shadow() const
 {
     return m_shadow;
@@ -978,7 +1148,7 @@ void DockView::setShadow(int shadow)
 
     m_shadow = shadow;
 
-    if (m_drawShadows) {
+    if (m_behaveAsPlasmaPanel) {
         syncGeometry();
     }
 
@@ -987,7 +1157,7 @@ void DockView::setShadow(int shadow)
 
 void DockView::updateEffects()
 {
-    if (!m_drawShadows) {
+    if (!m_behaveAsPlasmaPanel) {
         if (m_drawEffects && !m_effectsArea.isNull() && !m_effectsArea.isEmpty()) {
             //! this is used when compositing is disabled and provides
             //! the correct way for the mask to be painted in order for
@@ -1011,16 +1181,21 @@ void DockView::updateEffects()
             }
 
             KWindowEffects::enableBlurBehind(winId(), true, fixedMask);
-            KWindowEffects::enableBackgroundContrast(winId(), m_theme.backgroundContrastEnabled(),
+
+            bool drawBackgroundEffect = m_theme.backgroundContrastEnabled() && (m_dockTransparency == 100);
+            //based on Breeze Dark theme behavior the enableBackgroundContrast even though it does accept
+            //a QRegion it uses only the first rect. The bug was that for Breeze Dark there was a line
+            //at the dock bottom that was distinguishing it from other themes
+            KWindowEffects::enableBackgroundContrast(winId(), drawBackgroundEffect,
                     m_theme.backgroundContrast(),
                     m_theme.backgroundIntensity(),
                     m_theme.backgroundSaturation(),
-                    fixedMask);
+                    fixedMask.boundingRect());
         } else {
             KWindowEffects::enableBlurBehind(winId(), false);
             KWindowEffects::enableBackgroundContrast(winId(), false);
         }
-    } else if (m_drawShadows && m_drawEffects) {
+    } else if (m_behaveAsPlasmaPanel && m_drawEffects) {
         KWindowEffects::enableBlurBehind(winId(), true);
         KWindowEffects::enableBackgroundContrast(winId(), m_theme.backgroundContrastEnabled(),
                 m_theme.backgroundContrast(),
@@ -1071,6 +1246,27 @@ bool DockView::tasksPresent()
     return false;
 }
 
+//!check if the plasmoid with _name_ exists in the midedata
+bool DockView::mimeContainsPlasmoid(QMimeData *mimeData, QString name)
+{
+    if (!mimeData) {
+        return false;
+    }
+
+    if (mimeData->hasFormat(QStringLiteral("text/x-plasmoidservicename"))) {
+        QString data = mimeData->data(QStringLiteral("text/x-plasmoidservicename"));
+        const QStringList appletNames = data.split('\n', QString::SkipEmptyParts);
+
+        foreach (const QString &appletName, appletNames) {
+            if (appletName == name)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+
 VisibilityManager *DockView::visibility() const
 {
     return m_visibility;
@@ -1078,19 +1274,61 @@ VisibilityManager *DockView::visibility() const
 
 bool DockView::event(QEvent *e)
 {
-    emit eventTriggered(e);
+    if (!m_inDelete) {
+        emit eventTriggered(e);
 
-    return ContainmentView::event(e);
+        switch (e->type()) {
+            case QEvent::PlatformSurface:
+                if (auto pe = dynamic_cast<QPlatformSurfaceEvent *>(e)) {
+                    switch (pe->surfaceEventType()) {
+                        case QPlatformSurfaceEvent::SurfaceCreated:
+                            setupWaylandIntegration();
+
+                            if (m_shellSurface) {
+                                syncGeometry();
+
+                                if (m_drawShadows) {
+                                    PanelShadows::self()->addWindow(this, enabledBorders());
+                                }
+                            }
+
+                            break;
+
+                        case QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed:
+                            if (m_shellSurface) {
+                                m_shellSurface->release();
+                                delete m_shellSurface;
+                                m_shellSurface = nullptr;
+                                qDebug() << "wayland dock window surface was deleted...";
+                                PanelShadows::self()->removeWindow(this);
+                            }
+
+                            break;
+                    }
+                }
+
+                break;
+
+            default:
+                break;
+        }
+
+        return ContainmentView::event(e);
+    }
+
+    return false;
 }
 
 QList<int> DockView::freeEdges() const
 {
-    if (!this->corona() || !this->containment()) {
+    DockCorona *dockCorona = qobject_cast<DockCorona *>(this->corona());
+
+    if (!dockCorona) {
         const QList<int> emptyEdges;
         return emptyEdges;
     }
 
-    const auto edges = corona()->freeEdges(this->containment()->screen());
+    const auto edges = dockCorona->freeEdges(screen());
     QList<int> edgesInt;
 
     foreach (Plasma::Types::Location edge, edges) {
@@ -1122,6 +1360,23 @@ void DockView::deactivateApplets()
 
         if (ai) {
             ai->setExpanded(false);
+        }
+    }
+}
+
+void DockView::toggleAppletExpanded(const int id)
+{
+    if (!containment()) {
+        return;
+    }
+
+    foreach (auto applet, containment()->applets()) {
+        if (applet->id() == id) {
+            PlasmaQuick::AppletQuickItem *ai = applet->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
+
+            if (ai) {
+                ai->setExpanded(!ai->isExpanded());
+            }
         }
     }
 }
@@ -1221,10 +1476,26 @@ void DockView::mousePressEvent(QMouseEvent *event)
         Plasma::Applet *applet = 0;
         bool inSystray = false;
 
+        //! initialize the appletContainsMethod on the first right click
+        if (!m_appletContainsMethod.isValid()) {
+            updateAppletContainsMethod();
+        }
+
         foreach (Plasma::Applet *appletTemp, this->containment()->applets()) {
             PlasmaQuick::AppletQuickItem *ai = appletTemp->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
 
-            if (ai && ai->isVisible() && ai->contains(ai->mapFromItem(contentItem(), event->pos()))) {
+            bool appletContainsMouse = false;
+
+            if (m_appletContainsMethod.isValid()) {
+                QVariant retVal;
+                m_appletContainsMethod.invoke(m_appletContainsMethodItem, Qt::DirectConnection, Q_RETURN_ARG(QVariant, retVal)
+                                              , Q_ARG(QVariant, appletTemp->id()), Q_ARG(QVariant, event->pos()));
+                appletContainsMouse = retVal.toBool();
+            } else {
+                appletContainsMouse = ai->contains(ai->mapFromItem(contentItem(), event->pos()));
+            }
+
+            if (ai && ai->isVisible() && appletContainsMouse) {
                 applet = ai->applet();
                 KPluginMetaData meta = applet->kPackage().metadata();
 
@@ -1270,11 +1541,39 @@ void DockView::mousePressEvent(QMouseEvent *event)
                 desktopMenu->setAttribute(Qt::WA_DeleteOnClose);
                 m_contextMenu = desktopMenu;
 
-                if (this->mouseGrabberItem()) {
+                //! deprecated old code that can be removed if the following plasma approach doesnt
+                //! create any issues with context menu creation in Latte
+                /*if (this->mouseGrabberItem()) {
                     //workaround, this fixes for me most of the right click menu behavior
                     this->mouseGrabberItem()->ungrabMouse();
                     return;
+                }*/
+
+                //!plasma official code
+                //this is a workaround where Qt will fail to realise a mouse has been released
+
+                // this happens if a window which does not accept focus spawns a new window that takes focus and X grab
+                // whilst the mouse is depressed
+                // https://bugreports.qt.io/browse/QTBUG-59044
+                // this causes the next click to go missing
+
+                //by releasing manually we avoid that situation
+                auto ungrabMouseHack = [this]() {
+                    if (this->mouseGrabberItem()) {
+                        this->mouseGrabberItem()->ungrabMouse();
+                    }
+                };
+
+                //pre 5.8.0 QQuickWindow code is "item->grabMouse(); sendEvent(item, mouseEvent)"
+                //post 5.8.0 QQuickWindow code is sendEvent(item, mouseEvent); item->grabMouse()
+                if (QVersionNumber::fromString(qVersion()) > QVersionNumber(5, 8, 0)) {
+                    QTimer::singleShot(0, this, ungrabMouseHack);
+                } else {
+                    ungrabMouseHack();
                 }
+
+                //end workaround
+                //!end of plasma official code(workaround)
 
                 //qDebug() << "5 ...";
 
@@ -1342,6 +1641,28 @@ void DockView::mousePressEvent(QMouseEvent *event)
 
     //qDebug() << "10 ...";
     PlasmaQuick::ContainmentView::mousePressEvent(event);
+}
+
+//! update the appletContainsPos method from Panel view
+void DockView::updateAppletContainsMethod()
+{
+    for (QQuickItem *item : contentItem()->childItems()) {
+        if (auto *metaObject = item->metaObject()) {
+            // not using QMetaObject::invokeMethod to avoid warnings when calling
+            // this on applets that don't have it or other child items since this
+            // is pretty much trial and error.
+            // Also, "var" arguments are treated as QVariant in QMetaObject
+
+            int methodIndex = metaObject->indexOfMethod("appletContainsPos(QVariant,QVariant)");
+
+            if (methodIndex == -1) {
+                continue;
+            }
+
+            m_appletContainsMethod = metaObject->method(methodIndex);
+            m_appletContainsMethodItem = item;
+        }
+    }
 }
 
 void DockView::addAppletActions(QMenu *desktopMenu, Plasma::Applet *applet, QEvent *event)
@@ -1463,15 +1784,24 @@ void DockView::addContainmentActions(QMenu *desktopMenu, QEvent *event)
         if ((this->containment()->containmentType() != Plasma::Types::PanelContainment &&
              this->containment()->containmentType() != Plasma::Types::CustomPanelContainment) &&
             this->containment()->actions()->action(QStringLiteral("configure"))) {
+            auto *dockCorona = qobject_cast<DockCorona *>(this->corona());
+
+            if (dockCorona) {
+                desktopMenu->addAction(dockCorona->globalSettings()->addWidgetsAction());
+            }
+
             desktopMenu->addAction(this->containment()->actions()->action(QStringLiteral("configure")));
         }
     } else {
         auto *dockCorona = qobject_cast<DockCorona *>(this->corona());
 
+        desktopMenu->addSeparator();
+
         if (dockCorona && dockCorona->globalSettings()->exposeAltSession()) {
-            desktopMenu->addSeparator();
             desktopMenu->addAction(dockCorona->globalSettings()->altSessionAction());
         }
+
+        desktopMenu->addAction(dockCorona->globalSettings()->addWidgetsAction());
 
         desktopMenu->addActions(actions);
     }
@@ -1489,7 +1819,6 @@ Plasma::Containment *DockView::containmentById(uint id)
 
     return 0;
 }
-
 //!END overriding context menus behavior
 
 //!BEGIN draw panel shadows outside the dock window
@@ -1500,7 +1829,6 @@ Plasma::FrameSvg::EnabledBorders DockView::enabledBorders() const
 
 void DockView::updateEnabledBorders()
 {
-    // qDebug() << "draw shadow!!!! :" << m_drawShadows;
     if (!this->screen()) {
         return;
     }
@@ -1563,7 +1891,7 @@ void DockView::updateEnabledBorders()
         emit enabledBordersChanged();
     }
 
-    if (!m_drawShadows) {
+    if (!m_behaveAsPlasmaPanel || !m_drawShadows) {
         PanelShadows::self()->removeWindow(this);
     } else {
         PanelShadows::self()->setEnabledBorders(this, borders);
@@ -1582,7 +1910,7 @@ void DockView::saveConfig()
     config.writeEntry("onPrimary", m_onPrimary);
     config.writeEntry("session", (int)m_session);
     config.writeEntry("dockWindowBehavior", m_dockWinBehavior);
-    this->containment()->configNeedsSaving();
+    emit this->containment()->configNeedsSaving();
 }
 
 void DockView::restoreConfig()
@@ -1593,7 +1921,7 @@ void DockView::restoreConfig()
     auto config = this->containment()->config();
     setOnPrimary(config.readEntry("onPrimary", true));
     setSession((Dock::SessionType)config.readEntry("session", (int)Dock::DefaultSession));
-    setDockWinBehavior(config.readEntry("dockWindowBehavior", false));
+    setDockWinBehavior(config.readEntry("dockWindowBehavior", true));
 }
 //!END configuration functions
 

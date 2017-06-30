@@ -38,6 +38,7 @@
 #include <KLocalizedString>
 #include <KAboutData>
 #include <KDBusService>
+#include <KQuickAddons/QtQuickSettings>
 
 
 //! COLORS
@@ -64,8 +65,12 @@ int main(int argc, char **argv)
 
     QQuickWindow::setDefaultAlphaBuffer(true);
     QApplication app(argc, argv);
+    KQuickAddons::QtQuickSettings::init();
+
     KLocalizedString::setApplicationDomain("latte-dock");
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("latte-dock")));
+    //protect from closing app when changing to "alternative session" and back
+    app.setQuitOnLastWindowClosed(false);
 
     configureAboutData();
 
@@ -86,8 +91,10 @@ int main(int argc, char **argv)
     QLockFile lockFile {QDir::tempPath() + "/latte-dock.lock"};
 
     int timeout {100};
+
     if (parser.isSet(QStringLiteral("replace")) || parser.isSet(QStringLiteral("import"))) {
-        qint64 pid{-1};
+        qint64 pid{ -1};
+
         if (lockFile.getLockInfo(&pid, nullptr, nullptr)) {
             kill(static_cast<pid_t>(pid), SIGINT);
             timeout = 3000;

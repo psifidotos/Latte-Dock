@@ -35,6 +35,9 @@
 
 #include <Plasma/Package>
 
+#include <KWayland/Client/plasmashell.h>
+#include <KWayland/Client/surface.h>
+
 namespace Latte {
 
 DockConfigView::DockConfigView(Plasma::Containment *containment, DockView *dockView, QWindow *parent)
@@ -42,6 +45,8 @@ DockConfigView::DockConfigView(Plasma::Containment *containment, DockView *dockV
       m_blockFocusLost(false),
       m_dockView(dockView)
 {
+    setupWaylandIntegration();
+
     setScreen(m_dockView->screen());
 
     if (containment) {
@@ -53,7 +58,6 @@ DockConfigView::DockConfigView(Plasma::Containment *containment, DockView *dockV
     connections << connect(dockView, SIGNAL(screenChanged(QScreen *)), &m_screenSyncTimer, SLOT(start()));
     connections << connect(&m_screenSyncTimer, &QTimer::timeout, this, [this]() {
         setScreen(m_dockView->screen());
-        WindowSystem::self().setDockExtraFlags(*this);
         setFlags(wFlags());
         syncGeometry();
         syncSlideEffect();
@@ -76,9 +80,16 @@ DockConfigView::DockConfigView(Plasma::Containment *containment, DockView *dockV
 DockConfigView::~DockConfigView()
 {
     qDebug() << "DockConfigView deleting ...";
+
     foreach (auto var, connections) {
         QObject::disconnect(var);
     }
+
+    if (m_shellSurface) {
+        delete m_shellSurface;
+        m_shellSurface = nullptr;
+    }
+
 }
 
 void DockConfigView::init()
@@ -119,6 +130,8 @@ void DockConfigView::syncGeometry()
 
     int clearThickness = m_dockView->normalThickness();
 
+    QPoint position{0, 0};
+
     switch (m_dockView->containment()->formFactor()) {
         case Plasma::Types::Horizontal: {
             const QSize size(rootObject()->width(), rootObject()->height());
@@ -127,11 +140,13 @@ void DockConfigView::syncGeometry()
             resize(size);
 
             if (location == Plasma::Types::TopEdge) {
-                setPosition(sGeometry.center().x() - size.width() / 2
-                            , sGeometry.y() + clearThickness);
+                position = {sGeometry.center().x() - size.width() / 2
+                            , sGeometry.y() + clearThickness
+                           };
             } else if (location == Plasma::Types::BottomEdge) {
-                setPosition(sGeometry.center().x() - size.width() / 2
-                            , sGeometry.y() + sGeometry.height() - clearThickness - size.height());
+                position = {sGeometry.center().x() - size.width() / 2
+                            , sGeometry.y() + sGeometry.height() - clearThickness - size.height()
+                           };
             }
         }
         break;
@@ -143,11 +158,13 @@ void DockConfigView::syncGeometry()
             resize(size);
 
             if (location == Plasma::Types::LeftEdge) {
-                setPosition(sGeometry.x() + clearThickness
-                            , sGeometry.center().y() - size.height() / 2);
+                position = {sGeometry.x() + clearThickness
+                            , sGeometry.center().y() - size.height() / 2
+                           };
             } else if (location == Plasma::Types::RightEdge) {
-                setPosition(sGeometry.x() + sGeometry.width() - clearThickness - size.width()
-                            , sGeometry.center().y() - size.height() / 2);
+                position = {sGeometry.x() + sGeometry.width() - clearThickness - size.width()
+                            , sGeometry.center().y() - size.height() / 2
+                           };
             }
         }
         break;
@@ -155,6 +172,12 @@ void DockConfigView::syncGeometry()
         default:
             qWarning() << "no sync geometry, wrong formFactor";
             break;
+    }
+
+    setPosition(position);
+
+    if (m_shellSurface) {
+        m_shellSurface->setPosition(position);
     }
 }
 
@@ -183,7 +206,7 @@ void DockConfigView::syncSlideEffect()
             break;
 
         default:
-            qDebug() << staticMetaObject.className() << "wrong location";// << qEnumToStr(m_containment->location());
+            qDebug() << staticMetaObject.className() << "wrong location";
             break;
     }
 
@@ -253,23 +276,79 @@ void DockConfigView::focusOutEvent(QFocusEvent *ev)
     if (focusWindow && focusWindow->flags().testFlag(Qt::Popup))
         return;
 
-    if (!m_blockFocusLost) {
-        hide();
+    if (!m_blockFocusLost)
+        hideConfigWindow();
+}
+
+void DockConfigView::setupWaylandIntegration()
+{
+    if (m_shellSurface) {
+        // already setup
+        return;
+    }
+
+    if (DockCorona *c = qobject_cast<DockCorona *>(m_dockView->containment()->corona())) {
+        using namespace KWayland::Client;
+        PlasmaShell *interface = c->waylandDockCoronaInterface();
+
+        if (!interface) {
+            return;
+        }
+
+        Surface *s = Surface::fromWindow(this);
+
+        if (!s) {
+            return;
+        }
+
+        qDebug() << "wayland dock window surface was created...";
+
+        m_shellSurface = interface->createSurface(s, this);
+
+        syncGeometry();
     }
 }
 
+bool DockConfigView::event(QEvent *e)
+{
+    if (e->type() == QEvent::PlatformSurface) {
+        if (auto pe = dynamic_cast<QPlatformSurfaceEvent *>(e)) {
+            switch (pe->surfaceEventType()) {
+                case QPlatformSurfaceEvent::SurfaceCreated:
+
+                    if (m_shellSurface) {
+                        break;
+                    }
+
+                    setupWaylandIntegration();
+                    break;
+
+                case QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed:
+                    if (m_shellSurface) {
+                        delete m_shellSurface;
+                        m_shellSurface = nullptr;
+                    }
+
+                    PanelShadows::self()->removeWindow(this);
+                    break;
+            }
+        }
+    }
+
+    return PlasmaQuick::ConfigView::event(e);
+}
+
+
 void DockConfigView::immutabilityChanged(Plasma::Types::ImmutabilityType type)
 {
-    if (type != Plasma::Types::Mutable && isVisible()) {
-        hide();
-    }
+    if (type != Plasma::Types::Mutable && isVisible())
+        hideConfigWindow();
 }
 
 void DockConfigView::setSticker(bool blockFocusLost)
 {
-    if (m_blockFocusLost == blockFocusLost) {
+    if (m_blockFocusLost == blockFocusLost)
         return;
-    }
 
     m_blockFocusLost = blockFocusLost;
 }
@@ -283,8 +362,67 @@ void DockConfigView::addPanelSpacer()
 
 void DockConfigView::hideConfigWindow()
 {
-    hide();
+    if (m_shellSurface) {
+        //!NOTE: Avoid crash in wayland enviroment with qt5.9
+        close();
+    } else {
+        hide();
+    }
 }
+
+void DockConfigView::setSyncLaunchers(bool sync)
+{
+    auto *dockCorona = qobject_cast<DockCorona *>(m_dockView->corona());
+
+    //when the global launchers list is empty then the current dock launchers are used
+    if (sync && dockCorona && dockCorona->globalSettings()) {
+        //update the global launchers
+        Plasma::Containment *c = m_dockView->containment();
+
+        const auto &applets = c->applets();
+
+        for (auto *applet : applets) {
+            KPluginMetaData meta = applet->kPackage().metadata();
+
+            if (meta.pluginId() == "org.kde.latte.plasmoid") {
+                if (QQuickItem *appletInterface = applet->property("_plasma_graphicObject").value<QQuickItem *>()) {
+                    const auto &childItems = appletInterface->childItems();
+
+                    if (childItems.isEmpty()) {
+                        continue;
+                    }
+
+                    for (QQuickItem *item : childItems) {
+                        if (auto *metaObject = item->metaObject()) {
+                            // not using QMetaObject::invokeMethod to avoid warnings when calling
+                            // this on applets that don't have it or other child items since this
+                            // is pretty much trial and error.
+                            // Also, "var" arguments are treated as QVariant in QMetaObject
+
+                            int methodIndex = metaObject->indexOfMethod("getLauncherList()");
+
+                            if (methodIndex == -1) {
+                                continue;
+                            }
+
+                            QMetaMethod method = metaObject->method(methodIndex);
+
+                            QVariant launchers;
+
+                            if (method.invoke(item, Q_RETURN_ARG(QVariant, launchers))) {
+                                dockCorona->globalSettings()->setGlobalLaunchers(launchers.toStringList());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    dockCorona->globalSettings()->setSyncLaunchers(sync);
+}
+
 
 }
 // kate: indent-mode cstyle; indent-width 4; replace-tabs on;

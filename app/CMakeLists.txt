@@ -3,6 +3,7 @@ set(lattedock-app_SRCS
     windowinfowrap.cpp
     abstractwindowinterface.cpp
     xwindowinterface.cpp
+    waylandinterface.cpp
     windowinfowrap.cpp
     visibilitymanager.cpp
     dockcorona.cpp
@@ -13,6 +14,7 @@ set(lattedock-app_SRCS
     alternativeshelper.cpp
     screenpool.cpp
     globalsettings.cpp
+    globalshortcuts.cpp
     main.cpp
 )
 
@@ -31,6 +33,7 @@ target_link_libraries(latte-dock
     KF5::DBusAddons
     KF5::Declarative
     KF5::CoreAddons
+    KF5::GlobalAccel
     KF5::Archive
     KF5::XmlGui
     KF5::Plasma
@@ -50,9 +53,11 @@ if(HAVE_X11)
     )
 endif()
 
-configure_file(latte-dock.desktop.cmake latte-dock.desktop)
+configure_file(org.kde.latte-dock.desktop.cmake org.kde.latte-dock.desktop)
+configure_file(org.kde.latte-dock.appdata.xml.cmake org.kde.latte-dock.appdata.xml)
 
 install(TARGETS latte-dock ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/latte-dock.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.kde.latte-dock.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.kde.latte-dock.appdata.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
 install(FILES dbus/org.kde.LatteDock.xml DESTINATION ${KDE_INSTALL_DBUSINTERFACEDIR})
 install(FILES lattedock.notifyrc DESTINATION ${KNOTIFYRC_INSTALL_DIR})

@@ -2,14 +2,15 @@ project(lattedock)
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
 set(CMAKE_CXX_STANDARD 14)
-set(VERSION 0.6.0)
+set(VERSION 0.6.87)
 set(AUTHOR "Michail Vourlakos, Smith Ar")
 set(EMAIL "mvourlakos@gmail.com, audoban@openmailbox.org")
 set(WEBSITE "https://github.com/psifidotos/Latte-Dock")
 set(BUG_ADDRESS "https://github.com/psifidotos/Latte-Dock/issues")
+set(FAQS "https://github.com/psifidotos/Latte-Dock/wiki/F.A.Q.")
 
-set(QT_MIN_VERSION "5.6.0")
-set(KF5_MIN_VERSION "5.26.0")
+set(QT_MIN_VERSION "5.7.0")
+set(KF5_MIN_VERSION "5.29.0")
 
 set(KF5_LOCALE_PREFIX "")
 
@@ -19,7 +20,7 @@ set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${ECM_KDE_MODULE_DIR})
 find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED NO_MODULE COMPONENTS Quick Qml DBus Gui)
 find_package(KF5 ${KF5_MIN_VERSION} REQUIRED COMPONENTS
     Plasma PlasmaQuick WindowSystem Declarative Activities Notifications
-    I18n CoreAddons Archive XmlGui DBusAddons IconThemes Wayland)
+    I18n CoreAddons GlobalAccel Archive XmlGui DBusAddons IconThemes Wayland)
 
 find_package(X11 REQUIRED)
 set_package_properties(X11 PROPERTIES DESCRIPTION "X11 libraries"
@@ -31,6 +32,12 @@ if(X11_FOUND)
     find_package(XCB MODULE REQUIRED COMPONENTS XCB RANDR EVENT)
     set_package_properties(XCB PROPERTIES TYPE REQUIRED)
     find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS X11Extras)
+
+    if(NOT X11_SM_FOUND)
+        message(FATAL_ERROR "\nThe X11 Session Management (SM) development package could not be found.
+                \nPlease install libSM.\n")
+    endif(NOT X11_SM_FOUND)
+
 endif()
 
 if(X11_FOUND AND XCB_XCB_FOUND)
@@ -56,7 +63,4 @@ add_subdirectory(shell)
 add_subdirectory(containment)
 add_subdirectory(plasmoid)
 add_subdirectory(icons)
-
-plasma_install_package(build/shell/release org.kde.latte.shell shells shell)
-plasma_install_package(build/containment/release org.kde.latte.containment)
-plasma_install_package(build/plasmoid/release org.kde.latte.plasmoid)
+add_subdirectory(applets)

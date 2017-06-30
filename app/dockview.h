@@ -18,8 +18,8 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef NOWDOCKVIEW_H
-#define NOWDOCKVIEW_H
+#ifndef DOCKVIEW_H
+#define DOCKVIEW_H
 
 #include "plasmaquick/configview.h"
 #include "plasmaquick/containmentview.h"
@@ -29,6 +29,7 @@
 #include <QQuickView>
 #include <QQmlListProperty>
 #include <QMenu>
+#include <QMimeData>
 #include <QScreen>
 #include <QPointer>
 #include <QTimer>
@@ -41,10 +42,17 @@ class Corona;
 class Containment;
 }
 
+namespace KWayland {
+namespace Client {
+class PlasmaShellSurface;
+}
+}
+
 namespace Latte {
 
 class DockView : public PlasmaQuick::ContainmentView {
     Q_OBJECT
+    Q_PROPERTY(bool behaveAsPlasmaPanel READ behaveAsPlasmaPanel WRITE setBehaveAsPlasmaPanel NOTIFY behaveAsPlasmaPanelChanged)
     Q_PROPERTY(bool dockWinBehavior READ dockWinBehavior WRITE setDockWinBehavior NOTIFY dockWinBehaviorChanged)
     Q_PROPERTY(bool drawShadows READ drawShadows WRITE setDrawShadows NOTIFY drawShadowsChanged)
     Q_PROPERTY(bool drawEffects READ drawEffects WRITE setDrawEffects NOTIFY drawEffectsChanged)
@@ -52,6 +60,8 @@ class DockView : public PlasmaQuick::ContainmentView {
 
     Q_PROPERTY(int alignment READ alignment WRITE setAlignment NOTIFY alignmentChanged)
     Q_PROPERTY(int docksCount READ docksCount NOTIFY docksCountChanged)
+    Q_PROPERTY(int dockTransparency READ dockTransparency WRITE setDockTransparency NOTIFY dockTransparencyChanged)
+    Q_PROPERTY(int totalDocksCount READ totalDocksCount NOTIFY totalDocksCountChanged)
     Q_PROPERTY(int x READ x NOTIFY xChanged)
     Q_PROPERTY(int y READ y NOTIFY yChanged)
     Q_PROPERTY(int width READ width NOTIFY widthChanged)
@@ -94,6 +104,10 @@ public:
     int currentThickness() const;
 
     int docksCount() const;
+    int totalDocksCount() const;
+
+    bool behaveAsPlasmaPanel() const;
+    void setBehaveAsPlasmaPanel(bool behavior);
 
     bool dockWinBehavior() const;
     void setDockWinBehavior(bool dock);
@@ -106,6 +120,9 @@ public:
 
     float maxLength() const;
     void setMaxLength(float length);
+
+    int dockTransparency() const;
+    void setDockTransparency(int transparency);
 
     int maxThickness() const;
     void setMaxThickness(int thickness);
@@ -143,8 +160,6 @@ public:
 
     VisibilityManager *visibility() const;
 
-    void deactivateApplets();
-
     QQmlListProperty<QScreen> screens();
     static int countScreens(QQmlListProperty<QScreen> *property);
     static QScreen *atScreens(QQmlListProperty<QScreen> *property, int index);
@@ -153,18 +168,25 @@ public:
 public slots:
     Q_INVOKABLE void addNewDock();
     Q_INVOKABLE void removeDock();
+    Q_INVOKABLE void copyDock();
 
     Q_INVOKABLE QList<int> freeEdges() const;
     Q_INVOKABLE QVariantList containmentActions();
-    Q_INVOKABLE int docksWithTasks();
+
+    Q_INVOKABLE void deactivateApplets();
     Q_INVOKABLE void removeTasksPlasmoid();
+    Q_INVOKABLE void toggleAppletExpanded(const int id);
+    Q_INVOKABLE void updateEnabledBorders();
+
+    Q_INVOKABLE int docksWithTasks();
+
+    Q_INVOKABLE bool mimeContainsPlasmoid(QMimeData *mimeData, QString name);
     Q_INVOKABLE bool setCurrentScreen(const QString id);
     Q_INVOKABLE bool tasksPresent();
-    Q_INVOKABLE void updateEnabledBorders();
 
     Q_INVOKABLE void closeApplication();
 
-    void updateAbsDockGeometry();
+    void updateAbsDockGeometry(bool bypassChecks = false);
 
 protected slots:
     void showConfigurationInterface(Plasma::Applet *applet) override;
@@ -180,9 +202,11 @@ signals:
     void eventTriggered(QEvent *ev);
 
     void alignmentChanged();
+    void behaveAsPlasmaPanelChanged();
     void currentScreenChanged();
     void dockLocationChanged();
     void docksCountChanged();
+    void dockTransparencyChanged();
     void dockWinBehaviorChanged();
     void drawShadowsChanged();
     void drawEffectsChanged();
@@ -201,12 +225,14 @@ signals:
     void screenGeometryChanged();
     void sessionChanged();
     void shadowChanged();
+    void totalDocksCountChanged();
     void xChanged();
     void yChanged();
 
     void absGeometryChanged(const QRect &geometry);
 
 private slots:
+    void availableScreenRectChanged();
     void menuAboutToHide();
     void statusChanged(Plasma::Types::ItemStatus);
     void screenChanged(QScreen *screen);
@@ -218,19 +244,24 @@ private slots:
 private:
     void addAppletActions(QMenu *desktopMenu, Plasma::Applet *applet, QEvent *event);
     void addContainmentActions(QMenu *desktopMenu, QEvent *event);
+    void setupWaylandIntegration();
     void updatePosition(QRect availableScreenRect = QRect());
     void updateFormFactor();
+    void updateAppletContainsMethod();
 
     QRect maximumNormalGeometry();
 
 private:
     Plasma::Containment *containmentById(uint id);
 
+    bool m_behaveAsPlasmaPanel{false};
     bool m_forceDrawCenteredBorders{false};
     bool m_dockWinBehavior{false};
-    bool m_drawShadows{false};
+    bool m_drawShadows{true};
     bool m_drawEffects{false};
+    bool m_inDelete{false};
     bool m_onPrimary{true};
+    int m_dockTransparency{100};
     int m_maxThickness{24};
     int m_normalThickness{24};
     int m_offset{0};
@@ -245,6 +276,8 @@ private:
     QRect m_absGeometry;
     QRect m_maskArea;
     QMenu *m_contextMenu;
+    QMetaMethod m_appletContainsMethod;
+    QQuickItem *m_appletContainsMethodItem{nullptr};
     QPointer<PlasmaQuick::ConfigView> m_configView;
     QPointer<VisibilityManager> m_visibility;
     QPointer<QScreen> m_screenToFollow;
@@ -257,7 +290,8 @@ private:
     Plasma::FrameSvg *m_background{nullptr};
 
     //only for the mask, not to actually paint
-    Plasma::FrameSvg::EnabledBorders m_enabledBorders = Plasma::FrameSvg::AllBorders;
+    Plasma::FrameSvg::EnabledBorders m_enabledBorders{Plasma::FrameSvg::AllBorders};
+    KWayland::Client::PlasmaShellSurface *m_shellSurface{nullptr};
 };
 
 }

@@ -45,6 +45,15 @@ void DockPackage::initPackage(KPackage::Package *package)
     //Configuration
     package->addFileDefinition("lattedockconfigurationui", QStringLiteral("configuration/LatteDockConfiguration.qml"), i18n("Dock configuration UI"));
     package->addFileDefinition("configmodel", QStringLiteral("configuration/config.qml"), i18n("Config model"));
+    package->addFileDefinition("tangerineFont", QStringLiteral("fonts/tangerine.ttf"), i18n("Tangerine Font"));
+
+    package->addFileDefinition("layout1", QStringLiteral("layouts/Default.latterc"), i18n("default layout file"));
+    package->addFileDefinition("layout2", QStringLiteral("layouts/Plasma.latterc"), i18n("plasma layout file"));
+    package->addFileDefinition("layout3", QStringLiteral("layouts/Unity.latterc"), i18n("unity layout file"));
+    package->addFileDefinition("layout4", QStringLiteral("layouts/Extended.latterc"), i18n("extended layout file"));
+    
+    package->addFileDefinition("separator0", QStringLiteral("controls/latte-separator.desktop"), i18n("tasks plasmoid separator"));
+
     package->setFallbackPackage(fallback);
     qDebug() << "package is valid" << package->isValid();
 }
@@ -53,9 +62,9 @@ void DockPackage::pathChanged(KPackage::Package *package)
 {
     if (!package->metadata().isValid())
         return;
-        
+
     const QString pluginName = package->metadata().pluginId();
-    
+
     if (!pluginName.isEmpty() && pluginName != "org.kde.latte.shell") {
         auto fallback = KPackage::PackageLoader::self()->loadPackage("Plasma/Shell", "org.kde.latte.shell");
         package->setFallbackPackage(fallback);

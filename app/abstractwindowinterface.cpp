@@ -20,6 +20,7 @@
 
 #include "abstractwindowinterface.h"
 #include "xwindowinterface.h"
+#include "waylandinterface.h"
 
 #include <QObject>
 #include <QQuickWindow>
@@ -37,12 +38,12 @@ AbstractWindowInterface::~AbstractWindowInterface()
 {
 }
 
-void AbstractWindowInterface::addDock(WId wid)
+void AbstractWindowInterface::addDock(WindowId wid)
 {
     m_docks.push_back(wid);
 }
 
-void AbstractWindowInterface::removeDock(WId wid)
+void AbstractWindowInterface::removeDock(WindowId wid)
 {
     auto it = std::find(m_docks.begin(), m_docks.end(), wid);
 
@@ -57,6 +58,7 @@ AbstractWindowInterface &AbstractWindowInterface::self()
 
     if (KWindowSystem::isPlatformWayland()) {
         //! TODO: WaylandWindowInterface
+        m_wm = std::make_unique<WaylandInterface>();
     } else { /* if(KWindowSystem::isPlatformX11) */
         m_wm = std::make_unique<XWindowInterface>();
     }

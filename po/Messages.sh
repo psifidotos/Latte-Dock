@@ -15,7 +15,7 @@ PROJECTSHELL="plasma_shell_org.kde.latte.shell" # project name
 TEMPLATESHELL="shell.metadata.desktop.template" # shell desktop template
 
 PROJECTAPP="latte-dock" # project name
-TEMPLATEAPP="latte-dock.desktop.template" # app desktop template
+TEMPLATEAPP="org.kde.latte-dock.desktop.template" # app desktop template
 
 NOTIFYRC="lattedock.notifyrc.template" # notifyrc template
 
@@ -92,6 +92,7 @@ ki18n_xgettext app         "$PROJECTAPP"         "$TEMPLATEAPP"  shell
 # The msg of shell package is merged with app
 # ki18n_xgettext shell       "$PROJECTSHELL"       "$TEMPLATESHELL"
 
+# extract appstream metainfo strings
+cd "$BASEDIR/scripts"
+bash ./extract_metainfo.sh
 
-cd "$BASEDIR"
-bash ./update-metadata.sh

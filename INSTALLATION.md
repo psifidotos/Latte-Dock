@@ -1,7 +1,7 @@
 Installation
 ============
 
-## 1. Dependencies
+## Using installation script
 
 **Before running the installation script you have to install the dependencies needed for compiling.**
 
@@ -16,31 +16,24 @@ sudo apt install g++ cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extra
 
 ```
 sudo add-apt-repository ppa:kubuntu-ppa/backports
-sudo apt update 
-sudo apt dist-upgrade 
+sudo apt update
+sudo apt dist-upgrade
 ```
 
 ### Kubuntu and KDE Neon
 
 ```
-sudo apt install cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extras5-dev libkf5iconthemes-dev libkf5plasma-dev libkf5windowsystem-dev libkf5declarative-dev libkf5xmlgui-dev libkf5activities-dev build-essential libxcb-util-dev libkf5wayland-dev git gettext libkf5archive-dev libkf5notifications-dev libxcb-util0-dev
+sudo apt install cmake extra-cmake-modules qtdeclarative5-dev libqt5x11extras5-dev libkf5iconthemes-dev libkf5plasma-dev libkf5windowsystem-dev libkf5declarative-dev libkf5xmlgui-dev libkf5activities-dev build-essential libxcb-util-dev libkf5wayland-dev git gettext libkf5archive-dev libkf5notifications-dev libxcb-util0-dev libsm-dev
 ```
 
 ### Arch Linux
 
-For install it using the script:
 ```
-sudo pacman -Syy
-sudo pacman -S cmake extra-cmake-modules
-sudo pacman -S qt5-base qt5-declarative qt5-x11extras
-sudo pacman -S kiconthemes kdbusaddons kxmlgui kdeclarative plasma-framework plasma-desktop
-```
-Or easily install it from community repository:
-```
-sudo pacman -Sy latte-dock
+sudo pacman -Syu
+sudo pacman -S cmake extra-cmake-modules python plasma-framework plasma-desktop
 ```
 
-## 2. Building and Installing
+### Building and Installing
 
 **Now you can run the installation script.**
 
@@ -48,6 +41,3 @@ sudo pacman -Sy latte-dock
 sh install.sh
 ```
 
-## 3. Run
-
-Latte is now ready to be used by executing  ```latte-dock``` or _Latte Dock_ in applications menu.

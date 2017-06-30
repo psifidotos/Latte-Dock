@@ -75,6 +75,23 @@ public:
         RightClick
     };
     Q_ENUM(ClickAction)
+
+    enum TaskAction {
+        NoneAction = 0,
+        Close,
+        NewInstance,
+        ToggleMinimized,
+        CycleThroughTasks,
+        ToggleGrouping
+    };
+    Q_ENUM(TaskAction)
+
+    enum ActiveAppletIndicator {
+        NoneIndicator = 0,
+        InternalsIndicator = 1,
+        AllIndicator = 2
+    };
+    Q_ENUM(ActiveAppletIndicator)
 };
 
 }//end of namespace

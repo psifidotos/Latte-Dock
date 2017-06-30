@@ -33,18 +33,26 @@
 #include <QDBusConnection>
 #include <QDebug>
 #include <QDesktopWidget>
+#include <QFontDatabase>
 #include <QQmlContext>
 
 #include <Plasma>
 #include <Plasma/Corona>
 #include <Plasma/Containment>
+
 #include <KActionCollection>
 #include <KPluginMetaData>
+#include <KGlobalAccel>
 #include <KLocalizedString>
 #include <KPackage/Package>
 #include <KPackage/PackageLoader>
 #include <KAboutData>
 #include <KActivities/Consumer>
+
+#include <KWindowSystem>
+#include <KWayland/Client/connection_thread.h>
+#include <KWayland/Client/registry.h>
+#include <KWayland/Client/plasmashell.h>
 
 namespace Latte {
 
@@ -52,11 +60,13 @@ DockCorona::DockCorona(QObject *parent)
     : Plasma::Corona(parent),
       m_activityConsumer(new KActivities::Consumer(this)),
       m_screenPool(new ScreenPool(KSharedConfig::openConfig(), this)),
-      m_globalSettings(new GlobalSettings(this))
+      m_globalSettings(new GlobalSettings(this)),
+      m_globalShortcuts(new GlobalShortcuts(this))
 {
+    setupWaylandIntegration();
+
     KPackage::Package package(new DockPackage(this));
     m_screenPool->load();
-    m_globalSettings->load();
 
     if (!package.isValid()) {
         qWarning() << staticMetaObject.className()
@@ -68,8 +78,13 @@ DockCorona::DockCorona(QObject *parent)
     }
 
     setKPackage(package);
+    //! global settings must be loaded after the package has been set
+    m_globalSettings->load();
+
     qmlRegisterTypes();
-    connect(this, &Corona::containmentAdded, this, &DockCorona::addDock);
+    QFontDatabase::addApplicationFont(kPackage().filePath("tangerineFont"));
+
+    //connect(this, &Corona::containmentAdded, this, &DockCorona::addDock);
 
     if (m_activityConsumer && (m_activityConsumer->serviceStatus() == KActivities::Consumer::Running)) {
         load();
@@ -98,10 +113,13 @@ DockCorona::~DockCorona()
     }
 
     m_globalSettings->deleteLater();
+    m_globalShortcuts->deleteLater();
+
     qDeleteAll(m_dockViews);
     qDeleteAll(m_waitingDockViews);
     m_dockViews.clear();
     m_waitingDockViews.clear();
+
     disconnect(m_activityConsumer, &KActivities::Consumer::serviceStatusChanged, this, &DockCorona::load);
     delete m_activityConsumer;
     qDebug() << "deleted" << this;
@@ -123,7 +141,46 @@ void DockCorona::load()
         connect(m_screenPool, &ScreenPool::primaryPoolChanged, this, &DockCorona::screenCountChanged);
 
         loadLayout();
+
+        foreach (auto containment, containments())
+            addDock(containment);
     }
+}
+
+void DockCorona::setupWaylandIntegration()
+{
+    using namespace KWayland::Client;
+
+    if (!KWindowSystem::isPlatformWayland()) {
+        return;
+    }
+
+    auto connection = ConnectionThread::fromApplication(this);
+
+    if (!connection)
+        return;
+
+    Registry *registry{new Registry(this)};
+    registry->create(connection);
+
+    connect(registry, &Registry::plasmaShellAnnounced, this
+    , [this, registry](quint32 name, quint32 version) {
+        m_waylandDockCorona = registry->createPlasmaShell(name, version, this);
+    });
+
+    connect(qApp, &QCoreApplication::aboutToQuit, this, [this, registry]() {
+        if (m_waylandDockCorona)
+            m_waylandDockCorona->release();
+
+        registry->release();
+    });
+
+    registry->setup();
+}
+
+KWayland::Client::PlasmaShell *DockCorona::waylandDockCoronaInterface() const
+{
+    return m_waylandDockCorona;
 }
 
 void DockCorona::cleanConfig()
@@ -259,7 +316,7 @@ QRegion DockCorona::availableScreenRegion(int id) const
             // because the left and right are those who dodge others docks
             switch (view->location()) {
                 case Plasma::Types::TopEdge:
-                    if (view->drawShadows()) {
+                    if (view->behaveAsPlasmaPanel()) {
                         available -= view->geometry();
                     } else {
                         QRect realGeometry;
@@ -289,7 +346,7 @@ QRegion DockCorona::availableScreenRegion(int id) const
                     break;
 
                 case Plasma::Types::BottomEdge:
-                    if (view->drawShadows()) {
+                    if (view->behaveAsPlasmaPanel()) {
                         available -= view->geometry();
                     } else {
                         QRect realGeometry;
@@ -476,14 +533,9 @@ void DockCorona::syncDockViews()
     foreach (auto view, m_dockViews) {
         bool found{false};
 
-        foreach (auto scr, qGuiApp->screens()) {
-            int id = view->containment()->screen();
-
-            if (id == -1) {
-                id = view->containment()->lastScreen();
-            }
-
-            if (scr->name() == view->currentScreen()) {
+        foreach (auto scr, qGuiApp->screens()) {           
+            if (scr->name() == view->currentScreen()
+                    || (view->onPrimary() && scr == qGuiApp->primaryScreen() ) ) {
                 found = true;
                 break;
             }
@@ -515,7 +567,8 @@ void DockCorona::syncDockViews()
         bool found{false};
 
         foreach (auto scr, qGuiApp->screens()) {
-            if (scr->name() == view->currentScreen()) {
+            if (scr->name() == view->currentScreen()
+                    || (view->onPrimary() && scr == qGuiApp->primaryScreen()) ) {
                 found = true;
                 break;
             }
@@ -562,15 +615,12 @@ int DockCorona::primaryScreenId() const
 
 int DockCorona::docksCount(int screen) const
 {
-    if (screen == -1)
-        return 0;
+    QScreen *scr = m_screenPool->screenForId(screen);
 
     int docks{0};
 
     for (const auto &view : m_dockViews) {
-        if (view && view->containment()
-            && view->containment()->screen() == screen
-            && !view->containment()->destroyed()) {
+        if (view && view->screen() == scr && !view->containment()->destroyed()) {
             ++docks;
         }
     }
@@ -584,8 +634,21 @@ int DockCorona::docksCount() const
     int docks{0};
 
     for (const auto &view : m_dockViews) {
-        if (view && view->containment()
-            && !view->containment()->destroyed()) {
+        if (view && view->containment() && !view->containment()->destroyed()) {
+            ++docks;
+        }
+    }
+
+    // qDebug() << docks << "docks on screen:" << screen;
+    return docks;
+}
+
+int DockCorona::docksCount(QScreen *screen) const
+{
+    int docks{0};
+
+    for (const auto &view : m_dockViews) {
+        if (view && view->screen() == screen && !view->containment()->destroyed()) {
             ++docks;
         }
     }
@@ -679,13 +742,11 @@ QList<Plasma::Types::Location> DockCorona::freeEdges(int screen) const
     using Plasma::Types;
     QList<Types::Location> edges{Types::BottomEdge, Types::LeftEdge,
                                  Types::TopEdge, Types::RightEdge};
-    //when screen=-1 is passed then the primaryScreenid is used
-    int fixedScreen = (screen == -1) ? primaryScreenId() : screen;
+
+    QScreen *scr = m_screenPool->screenForId(screen);
 
     for (auto *view : m_dockViews) {
-        if (view && view->containment()
-            && view->containment()->screen() == fixedScreen
-            && view->session() == m_session) {
+        if (view && scr && view->currentScreen() == scr->name() && view->session() == m_session) {
             edges.removeOne(view->location());
         }
     }
@@ -741,7 +802,7 @@ int DockCorona::screenForContainment(const Plasma::Containment *containment) con
     return -1;
 }
 
-void DockCorona::addDock(Plasma::Containment *containment)
+void DockCorona::addDock(Plasma::Containment *containment, int expDockScreen)
 {
     if (!containment || !containment->kPackage().isValid()) {
         qWarning() << "the requested containment plugin can not be located or loaded";
@@ -782,11 +843,15 @@ void DockCorona::addDock(Plasma::Containment *containment)
     bool onPrimary = containment->config().readEntry("onPrimary", true);
     int id = containment->screen();
 
-    if (id == -1) {
+    if (id == -1 && expDockScreen == -1) {
         id = containment->lastScreen();
     }
 
-    qDebug() << "add dock - containment id : " << id;
+    if (expDockScreen > -1) {
+        id = expDockScreen;
+    }
+
+    qDebug() << "add dock - containment id : " << id << " onprimary:" << onPrimary << " forceDockLoad:" << forceDockLoading;
 
     if (id >= 0 && !onPrimary && !forceDockLoading) {
         QString connector = m_screenPool->connector(id);
@@ -808,18 +873,18 @@ void DockCorona::addDock(Plasma::Containment *containment)
     }
 
     qDebug() << "Adding dock for container...";
-    qDebug() << "onPrimary: " << onPrimary << "screen!!! :" << containment->screen();
+    qDebug() << "onPrimary: " << onPrimary << "screen!!! :" << nextScreen->name();
 
     //! it is used to set the correct flag during the creation
     //! of the window... This of course is also used during
     //! recreations of the window between different visibility modes
     auto mode = static_cast<Dock::Visibility>(containment->config().readEntry("visibility", static_cast<int>(Dock::DodgeActive)));
-    bool dockWin{false};
+    bool dockWin{true};
 
     if (mode == Dock::AlwaysVisible || mode == Dock::WindowsGoBelow) {
         dockWin = true;
     } else {
-        dockWin = containment->config().readEntry("dockWindowBehavior", false);
+        dockWin = containment->config().readEntry("dockWindowBehavior", true);
     }
 
     auto dockView = new DockView(this, nextScreen, dockWin);
@@ -840,7 +905,13 @@ void DockCorona::addDock(Plasma::Containment *containment)
     connect(containment, &Plasma::Containment::appletAlternativesRequested
             , this, &DockCorona::showAlternativesForApplet, Qt::QueuedConnection);
 
+    //! Qt 5.9 creates a crash for this in wayland, that is why the check is used
+    //! but on the other hand we need this for copy to work correctly and show
+    //! the copied dock under X11
+    //if (!KWindowSystem::isPlatformWayland()) {
     dockView->show();
+    //}
+
     m_dockViews[containment] = dockView;
 
     if (m_waitingSessionDocksCreation) {
@@ -856,13 +927,28 @@ void DockCorona::addDock(Plasma::Containment *containment)
 
 void DockCorona::recreateDock(Plasma::Containment *containment)
 {
-    auto view = m_dockViews.take(containment);
+    //! give the time to config window to close itself first and then recreate the dock
+    //! step:1 remove the dockview
+    QTimer::singleShot(350, [this, containment]() {
+        auto view = m_dockViews.take(containment);
 
-    if (view) {
-        view->setVisible(false);
-        view->deleteLater();
-        addDock(view->containment());
-    }
+        if (view) {
+            qDebug() << "recreate - step 1: removing dock for containment:" << containment->id();
+
+            //! step:2 add the new dockview
+            connect(view, &QObject::destroyed, this, [this, containment]() {
+                QTimer::singleShot(250, this, [this, containment](){
+                    if (!m_dockViews.contains(containment)) {
+                        qDebug() << "recreate - step 2: adding dock for containment:" << containment->id();
+                        addDock(containment);
+                    }
+                });
+            });
+
+            view->deleteLater();
+
+        }
+    });
 }
 
 void DockCorona::destroyedChanged(bool destroyed)
@@ -889,7 +975,7 @@ void DockCorona::dockContainmentDestroyed(QObject *cont)
     auto view = m_waitingDockViews.take(static_cast<Plasma::Containment *>(cont));
 
     if (view)
-        delete view;
+        view->deleteLater();
 
     emit docksCountChanged();
 }
@@ -995,6 +1081,186 @@ void DockCorona::loadDefaultLayout()
     defaultContainment->createApplet(QStringLiteral("org.kde.plasma.analogclock"));
 }
 
+void DockCorona::copyDock(Plasma::Containment *containment)
+{
+    if (!containment)
+        return;
+
+    qDebug() << "copying containment layout";
+    //! Settting mutable for create a containment
+    setImmutability(Plasma::Types::Mutable);
+
+    //! WE NEED A WAY TO COPY A CONTAINMENT!!!!
+    QFile copyFile(QDir::homePath() + "/.config/lattedock.copy1.bak");
+
+    if (copyFile.exists())
+        copyFile.remove();
+
+    KSharedConfigPtr newFile = KSharedConfig::openConfig(QDir::homePath() + "/.config/lattedock.copy1.bak");
+    KConfigGroup copied_conts = KConfigGroup(newFile, "Containments");
+    KConfigGroup copied_c1 = KConfigGroup(&copied_conts, QString::number(containment->id()));
+
+    containment->config().copyTo(&copied_c1);
+
+    //!investigate if there is a systray in the containment to copy also
+    int systrayId = -1;
+    auto applets = containment->config().group("Applets");
+
+    foreach (auto applet, applets.groupList()) {
+        KConfigGroup appletSettings = applets.group(applet).group("Configuration");
+
+        int tSysId = appletSettings.readEntry("SystrayContainmentId", "-1").toInt();
+
+        if (tSysId != -1) {
+            systrayId = tSysId;
+            qDebug() << "systray was found in the containment...";
+            break;
+        }
+    }
+
+    if (systrayId != -1) {
+        Plasma::Containment *systray{nullptr};
+
+        foreach (auto containment, containments()) {
+            if (containment->id() == systrayId) {
+                systray = containment;
+                break;
+            }
+        }
+
+        if (systray) {
+            KConfigGroup copied_systray = KConfigGroup(&copied_conts, QString::number(systray->id()));
+            systray->config().copyTo(&copied_systray);
+        }
+    }
+
+    //! end of systray specific code
+
+
+    //! Finally import the configuration
+    auto nConts = importLayout(KConfigGroup(newFile, ""));
+
+    ///Find latte and systray containments
+    qDebug() << " imported containments ::: " << nConts.length();
+
+    Plasma::Containment *newContainment{nullptr};
+    int newSystrayId = -1;
+
+    foreach (auto containment, nConts) {
+        KPluginMetaData meta = containment->kPackage().metadata();
+
+        if (meta.pluginId() == "org.kde.latte.containment") {
+            qDebug() << "new latte containment id: " << containment->id();
+            newContainment = containment;
+        } else if (meta.pluginId() == "org.kde.plasma.private.systemtray") {
+            qDebug() << "new systray containment id: " << containment->id();
+            newSystrayId = containment->id();
+        }
+    }
+
+    if (!newContainment)
+        return;
+
+    ///after systray was found we must update in latte the relevant id
+    if (newSystrayId != -1) {
+        applets = newContainment->config().group("Applets");
+
+        qDebug() << "systray found with id : " << newSystrayId << " and applets in the containment :" << applets.groupList().count();
+
+        foreach (auto applet, applets.groupList()) {
+            KConfigGroup appletSettings = applets.group(applet).group("Configuration");
+
+            if (appletSettings.hasKey("SystrayContainmentId")) {
+                qDebug() << "!!! updating systray id to : " << newSystrayId;
+                appletSettings.writeEntry("SystrayContainmentId", newSystrayId);
+            }
+        }
+    }
+
+    newContainment->setContainmentType(Plasma::Types::PanelContainment);
+    newContainment->init();
+
+    if (!newContainment || !newContainment->kPackage().isValid()) {
+        qWarning() << "the requested containment plugin can not be located or loaded";
+        return;
+    }
+
+    auto config = newContainment->config();
+    newContainment->restore(config);
+
+    //in multi-screen environment the copied dock is moved to alternative screens first
+    const auto screens = qGuiApp->screens();
+    auto dock = m_dockViews[containment];
+
+    bool setOnExplicitScreen = false;
+
+    int dockScrId = -1;
+    int copyScrId = -1;
+
+    if (dock) {
+        dockScrId = m_screenPool->id(dock->currentScreen());
+        qDebug() << "COPY DOCK SCREEN ::: " << dockScrId;
+
+        if (dockScrId != -1 && screens.count() > 1) {
+            foreach (auto scr, screens) {
+                copyScrId = m_screenPool->id(scr->name());
+
+                //the screen must exist and not be the same with the original dock
+                if (copyScrId > -1 && copyScrId != dockScrId) {
+                    QList<Plasma::Types::Location> fEdges = freeEdges(copyScrId);
+
+                    if (fEdges.contains((Plasma::Types::Location)containment->location())) {
+                        ///set this containment to an explicit screen
+                        newContainment->config().writeEntry("onPrimary", false);
+                        newContainment->config().writeEntry("lastScreen", copyScrId);
+                        newContainment->setLocation(containment->location());
+
+                        qDebug() << "COPY DOCK SCREEN NEW SCREEN ::: " << copyScrId;
+
+                        setOnExplicitScreen = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!setOnExplicitScreen) {
+        QList<Plasma::Types::Location> edges = freeEdges(newContainment->screen());
+
+        if (edges.count() > 0) {
+            newContainment->setLocation(edges.at(0));
+        } else {
+            newContainment->setLocation(Plasma::Types::BottomEdge);
+        }
+
+        newContainment->config().writeEntry("onPrimary", false);
+        newContainment->config().writeEntry("lastScreen", dockScrId);
+    }
+
+    if (currentSession() != Dock::DefaultSession) {
+        newContainment->config().writeEntry("session", (int)currentSession());
+    }
+
+    newContainment->updateConstraints(Plasma::Types::StartupCompletedConstraint);
+
+    newContainment->save(config);
+    requestConfigSync();
+
+    newContainment->flushPendingConstraintsEvents();
+    emit containmentAdded(newContainment);
+    emit containmentCreated(newContainment);
+
+    if (setOnExplicitScreen && copyScrId > -1) {
+        qDebug() << "Copy Dock in explicit screen ::: " << copyScrId;
+        addDock(newContainment, copyScrId);
+        newContainment->reactToScreenChange();
+    } else {
+        qDebug() << "Copy Dock in current screen...";
+        addDock(newContainment, dockScrId);
+    }
+}
+
 //! This function figures in the beginning if a dock with tasks
 //! in it will be loaded taking into account also the screens are present.
 bool DockCorona::heuresticForLoadingDockWithTasks()
@@ -1073,18 +1339,13 @@ bool DockCorona::containmentContainsTasks(Plasma::Containment *cont)
 //! Activate launcher menu through dbus interface
 void DockCorona::activateLauncherMenu()
 {
-    for (auto it = m_dockViews.constBegin(), end = m_dockViews.constEnd(); it != end; ++it) {
-        const auto applets = it.key()->applets();
+    m_globalShortcuts->activateLauncherMenu();
+}
 
-        for (auto applet : applets) {
-            const auto provides = applet->kPackage().metadata().value(QStringLiteral("X-Plasma-Provides"));
-
-            if (provides.contains(QLatin1String("org.kde.plasma.launchermenu"))) {
-                emit applet->activated();
-                return;
-            }
-        }
-    }
+//! update badge for specific dock item
+void DockCorona::updateDockItemBadge(QString identifier, QString value)
+{
+    m_globalShortcuts->updateDockItemBadge(identifier, value);
 }
 
 inline void DockCorona::qmlRegisterTypes() const
