@@ -774,25 +774,6 @@ PlasmaComponents.ContextMenu {
     }
 
     PlasmaComponents.MenuItem {
-        id: closeWindowItem
-        visible: (visualParent && visualParent.m.IsLauncher !== true && visualParent.m.IsStartup !== true)
-
-        enabled: visualParent && visualParent.m.IsClosable === true
-
-        text: i18n("Close")
-        icon: "window-close"
-
-        onClicked: {
-            if (root.zoomFactor>1) {
-                delayWindowRemovalTimer.modelIndex = menu.modelIndex;
-                delayWindowRemovalTimer.start();
-            } else {
-                tasksModel.requestClose(menu.modelIndex);
-            }
-        }
-    }
-
-    PlasmaComponents.MenuItem {
         id: removePlasmoid
         visible: !latteDock && !plasmoid.immutable
 
@@ -830,7 +811,7 @@ PlasmaComponents.ContextMenu {
     PlasmaComponents.MenuItem {
         id: layoutsMenuItem
 
-        visible: latteDock && latteDock.universalLayoutManager.menuLayouts.length>1
+        visible: latteDock && latteDock.universalLayoutManager.menuLayouts.length>1 && !closeWindowItem.visible
         enabled: visible
 
         icon: "user-identity"
@@ -895,7 +876,7 @@ PlasmaComponents.ContextMenu {
 
     PlasmaComponents.MenuItem {
         id: addWidgets
-        visible: latteDock && latteDock.universalLayoutManager.addWidgetsAction
+        visible: latteDock && latteDock.universalLayoutManager.addWidgetsAction && !closeWindowItem.visible
 
         icon: "add"
         text: i18n("Add Widgets...")
@@ -931,6 +912,10 @@ PlasmaComponents.ContextMenu {
                     }
                 }
 
+                // Get rid of Latte Settings where it interferes with normal workflow.
+                if ((visualParent || visualParent.m.IsLauncher) && visibleActions == 1 && closeWindowItem.visible)
+                    visibleActions = 0;
+
                 if (visibleActions > 1) {
                     for (var i=0; i<actionList.length; ++i){
                         var item = menu.newMenuItem(containmentSubMenu);
@@ -953,6 +938,30 @@ PlasmaComponents.ContextMenu {
             }
 
             Component.onCompleted: refresh();
+        }
+    }
+
+    PlasmaComponents.MenuItem {
+        separator: true
+        visible: closeWindowItem.visible
+    }
+
+    PlasmaComponents.MenuItem {
+        id: closeWindowItem
+        visible: (visualParent && visualParent.m.IsLauncher !== true && visualParent.m.IsStartup !== true)
+
+        enabled: visualParent && visualParent.m.IsClosable === true
+
+        text: i18n("Close")
+        icon: "window-close"
+
+        onClicked: {
+            if (root.zoomFactor>1) {
+                delayWindowRemovalTimer.modelIndex = menu.modelIndex;
+                delayWindowRemovalTimer.start();
+            } else {
+                tasksModel.requestClose(menu.modelIndex);
+            }
         }
     }
 
