@@ -5,6 +5,8 @@ Installation
 
 **Before running the installation script you have to install the dependencies needed for compiling.**
 
+**If you want to use git to download what you need or in order to update from github please also install git.**
+
 
 ### Kubuntu only
 
@@ -29,9 +31,33 @@ sudo pacman -S cmake extra-cmake-modules python plasma-framework plasma-desktop
 
 ### Building and Installing
 
+To use git to download what you need:
+```
+git clone https://github.com/psifidotos/Latte-Dock.git
+```
+
 **Now you can run the installation script.**
 
 ```
 sh install.sh
 ```
 
+### Updating
+You can have a script in your `~/bin` folder with this code. It simply uses git to check for changes then rebuilds the application. Please do not remove the `Latte-Dock` folder that you downloaded with `git clone`.
+```
+#!/bin/bash
+
+# Ending process
+killall latte-dock
+
+# Updating from github
+cd ~/Latte-Dock
+git pull https://github.com/psifidotos/Latte-Dock.git
+
+# Build
+./install.sh
+
+sleep 1s
+echo "Done. Now starting latte."
+latte-dock &
+```
