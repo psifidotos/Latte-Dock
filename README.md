@@ -9,7 +9,7 @@ Announcements
 
 **Latte has moved its online services under kde infrastructure.**
 
-**New issues should be reported at:** https://bugs.kde.org/enter_bug.cgi?product=latte-dock
+**New issues should be reported at:** https://bugs.kde.org/enter_bug.cgi?product=lattedock
 
 **The codepage can be found at:** https://phabricator.kde.org/source/latte-dock/
 
