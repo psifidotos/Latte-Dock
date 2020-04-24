@@ -11,7 +11,7 @@ Announcements
 
 **New issues should be reported at:** https://bugs.kde.org/enter_bug.cgi?product=lattedock
 
-**The codepage can be found at:** https://phabricator.kde.org/source/latte-dock/
+**The codepage can be found at:** https://invent.kde.org/kde/latte-dock
 
 **A github mirror can be found at:** https://github.com/KDE/latte-dock
 
